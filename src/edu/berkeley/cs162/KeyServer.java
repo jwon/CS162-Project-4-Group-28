@@ -33,7 +33,7 @@ import java.io.Serializable;
 import java.util.*;
 
 /**
- * This class defines the salve key value servers. Each individual KeyServer 
+ * This class defines the slave key value servers. Each individual KeyServer 
  * would be a fully functioning Key-Value server. For Project 3, you would 
  * implement this class. For Project 4, you will have a Master Key-Value server 
  * and multiple of these slave Key-Value servers, each of them catering to a 
