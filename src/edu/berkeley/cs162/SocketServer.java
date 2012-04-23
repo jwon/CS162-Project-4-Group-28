@@ -64,6 +64,7 @@ public class SocketServer {
 
 	public void connect() throws IOException {
 		// implement me
+		server = new ServerSocket(this.port);
 	}
 	
 	/**
@@ -72,6 +73,10 @@ public class SocketServer {
 	 */
 	public void run() throws IOException {
 		// implement me
+		while (true){
+			Socket clientSocket = server.accept();
+			this.handler.handle(clientSocket);
+		}
 	}
 	
 	/** 
@@ -80,5 +85,6 @@ public class SocketServer {
 	 */
 	public void addHandler(NetworkHandler handler) {
 		// implement me
+		this.handler = (KVClientHandler)handler;
 	}
 }
