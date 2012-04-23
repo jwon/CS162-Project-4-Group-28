@@ -3,7 +3,6 @@
  * This is also used by the Master server to reach the slave nodes.
  * 
  * @author Prashanth Mohan (http://www.cs.berkeley.edu/~prmohan)
- * @author Mosharaf Chowdhury (http://www.mosharaf.com)
  *
  * Copyright (c) 2011, University of California at Berkeley
  * All rights reserved.
@@ -31,9 +30,19 @@
  */
 package edu.berkeley.cs162;
 
+
+import java.io.ByteArrayOutputStream;
+import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.Socket;
-
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
 /**
  * This class is used to communicate with (appropriately marshalling and unmarshalling) 
@@ -58,19 +67,283 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 	
 	@Override
 	public boolean put(K key, V value) throws KVException {
-		// implement me
-		return false;
+		String keyAsString = KVMessage.marshal(key);
+		if (keyAsString.getBytes().length > 256){
+			throw new KVException(new KVMessage("resp", null, null, null, "Over sized key"));
+		}
+		
+		String valueAsString = KVMessage.marshal(value);
+		if(valueAsString.getBytes().length > 131072){
+			throw new KVException(new KVMessage("resp", null, null, null, "Over sized value"));
+		}
+		
+		Socket s = null;
+		
+		try{
+			s = new Socket(server, port);
+		} catch (UnknownHostException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not create socket"));
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		//ObjectOutputStream oos = null;
+		InputStream is = null;
+		
+		FilterOutputStream fos = null;
+		
+		try{
+//			oos = new ObjectOutputStream(s.getOutputStream());
+//			oos.flush();
+			fos = new FilterOutputStream(s.getOutputStream());
+			fos.flush();
+		} catch(IOException e){
+			try{
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+		
+		
+		
+		try{
+			is = s.getInputStream();
+
+		} catch(IOException e){
+			try{
+				//System.out.println("Failed getting inputstream");
+				s.close();
+				throw new KVException(new KVMessage("resp", keyAsString, valueAsString, false, "Network Error: Could not send data"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", keyAsString, valueAsString, false, "IO Error"));
+			}
+		}
+
+		
+		KVMessage reqMessage = new KVMessage("putreq", keyAsString, valueAsString);
+		String xml = reqMessage.toXML();
+		//System.out.println("REQUEST XML: " + xml);
+
+		try{
+			byte [] xmlBytes = xml.getBytes();
+			fos.write(xmlBytes);
+			fos.flush();
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+		}
+		
+		try {
+			s.shutdownOutput();
+		} catch (IOException e1) {
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+		}
+		
+		
+		try{
+			s.setSoTimeout(60000);
+		} catch(SocketException e){
+			//System.out.println(e);
+			try{	
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+
+		
+		KVMessage respMessage = new KVMessage(is);
+		
+		try{
+			s.close();
+			fos.close();
+		} catch(IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		if(respMessage.getMessage().equals("Success")){
+			return respMessage.getStatus();
+		}
+		else{
+			throw new KVException(new KVMessage("resp", null, null, null, respMessage.getMessage()));
+		}
+
 	}
 
 	@SuppressWarnings("unchecked")
 	@Override
 	public V get(K key) throws KVException {
-		// implement me
-		return null;
+		String keyAsString = KVMessage.marshal(key);
+		if (keyAsString.getBytes().length > 256){
+			throw new KVException(new KVMessage("resp", null, null, null, "Over sized key"));
+		}
+		
+		String valueAsString = null;
+		
+		Socket s = null;
+		
+		try{
+			s = new Socket(server, port);
+		} catch (UnknownHostException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not create socket"));
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		FilterOutputStream fos = null;
+		InputStream is = null;
+		
+		try{
+			fos = new FilterOutputStream(s.getOutputStream());
+			fos.flush();
+			is = s.getInputStream();
+		} catch(IOException e){
+			try{
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+
+
+		KVMessage reqMessage = new KVMessage("getreq", keyAsString, valueAsString);
+		String xml = reqMessage.toXML();
+		//System.out.println("REQUEST XML: " + xml);
+		
+		byte [] xmlBytes = xml.getBytes();
+
+		try{
+			fos.write(xmlBytes);
+			fos.flush();
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+		}
+		
+		try {
+			s.shutdownOutput();
+		} catch (IOException e1) {
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		try{
+			s.setSoTimeout(60000);
+		} catch(SocketException e){
+			try{
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+
+		KVMessage respMessage = new KVMessage(is);
+		
+		try{
+			s.close();
+			fos.close();
+		} catch(IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		if(respMessage.getMessage().equals("Success")){
+			V value = null;
+			try{
+				value = (V) KVMessage.unmarshal(respMessage.getValue());
+			} catch (IOException e){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			} catch (ClassNotFoundException e) {
+				throw new KVException(new KVMessage("resp", null, null, null, "Unknown Error: class not found for value"));
+			} 
+
+			return value;
+		}
+		else{
+			throw new KVException(new KVMessage("resp", null, null, null, respMessage.getMessage()));
+		}
 	}
 
 	@Override
 	public void del(K key) throws KVException {
-		// implement me		
+		String keyAsString = KVMessage.marshal(key);
+		if (keyAsString.getBytes().length > 256){
+			throw new KVException(new KVMessage("resp", null, null, null, "Over sized key"));
+		}
+		
+		String valueAsString = null;
+		
+		Socket s = null;
+		
+		try{
+			s = new Socket(server, port);
+		} catch (UnknownHostException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not create socket"));
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		FilterOutputStream fos = null;
+		InputStream is = null;
+		
+		try{
+			fos = new FilterOutputStream(s.getOutputStream());
+			fos.flush();
+			is = s.getInputStream();
+		} catch(IOException e){
+			try{
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+
+
+		
+		KVMessage reqMessage = new KVMessage("delreq", keyAsString, valueAsString);
+		String xml = reqMessage.toXML();
+		//System.out.println("REQUEST XML: " + xml);
+		
+		byte[] xmlBytes = xml.getBytes();
+
+		try{
+			fos.write(xmlBytes);
+			fos.flush();
+		} catch (IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "Network Error: Could not send data"));
+		}
+		
+		try {
+			s.shutdownOutput();
+		} catch (IOException e1) {
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		try{
+			s.setSoTimeout(60000);
+		} catch(SocketException e){
+			try{
+				s.close();
+				throw new KVException(new KVMessage("resp", null, null, null, "Network Error"));
+			} catch (IOException e2){
+				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+			}
+		}
+		
+		KVMessage respMessage = new KVMessage(is);
+		
+		try{
+			s.close();
+			fos.close();
+		} catch(IOException e){
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		
+		if(!respMessage.getMessage().equals("Success")){
+			throw new KVException(new KVMessage("resp", null, null, null, respMessage.getMessage()));
+		}
+
 	}
 }

@@ -1,4 +1,4 @@
-/**
+ /**
  * Slave Server component of a KeyValue store
  * 
  * @author Prashanth Mohan (http://www.cs.berkeley.edu/~prmohan)
@@ -30,6 +30,7 @@
 package edu.berkeley.cs162;
 
 import java.io.Serializable;
+import java.util.*;
 
 /**
  * This class defines the salve key value servers. Each individual KeyServer 
@@ -49,22 +50,96 @@ public class KeyServer<K extends Serializable, V extends Serializable> implement
 	 * @param cacheSize number of entries in the data Cache.
 	 */
 	public KeyServer(int cacheSize) {
-		// implement me
+	    dataCache = new KVCache(cacheSize);
+	    dataStore = new KVStore();
 	}
 	
 	public boolean put(K key, V value) throws KVException {
-		// implement me
+	    String keyString = KVMessage.marshal(key);
+	    String valueString = KVMessage.marshal(value);
+		
+		//System.out.println("Keyserver key: " + key);
+		//System.out.println("Keyserver value: " + value);
+		
+	    byte[] size = (keyString).getBytes();
+	    if (size.length > 256)
+		throw new KVException(new KVMessage("resp", keyString, valueString, false, "Over sized key"));
+	    if (size.length == 0)
+	    	throw new KVException(new KVMessage("resp", keyString, valueString, false, "Empty Key"));
+	    size = (valueString).getBytes();
+	    if (size.length > 131072)
+	    	throw new KVException(new KVMessage("resp", keyString, valueString, false, "Over sized value"));
+	    if (size.length == 0)
+	    	throw new KVException(new KVMessage("resp", keyString, valueString, false, "Empty Value"));
+
+		boolean store = false;
+		boolean cache = false;
+		
+		try{
+		    synchronized (dataStore) {
+			store = dataStore.put(key,value);
+		    }
+		}catch (KVException e) {
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		cache = dataCache.put(key,value);
+		
+	    if (store == true)
+		return true;
+	    if (store == false && cache == false)
 		return false;
+	    throw new KVException(new KVMessage("resp", keyString, valueString, false, "Unknown error: cache and store not in sync"));
 	}
 	
 	public V get (K key) throws KVException {
 		// implement me
-		return null;
+		String keyString = KVMessage.marshal(key);
+		byte[] size = keyString.getBytes();
+		if(size.length > 256)
+		throw new KVException(new KVMessage("resp", keyString, null, false, "Over sized key"));
+	    if (size.length == 0)
+		throw new KVException(new KVMessage("resp", keyString, null, false, "Empty key"));
+		
+		if(dataCache.get(key) != null){
+			return dataCache.get(key);
+		}
+		try{
+		    if (dataStore.get(key) != null) {
+			return dataStore.get(key);
+		    }
+		} catch (KVException e) {
+			throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+		}
+		throw new KVException(new KVMessage("resp", null, null, null, "Does Not Exist"));
 	}
 
 	@Override
 	public void del(K key) throws KVException {
-		// implement me		
+		String keyString = KVMessage.marshal(key);
+		
+		byte[] size = keyString.getBytes();
+		if(size.length > 256)
+		throw new KVException(new KVMessage("resp", keyString, null, false, "Over sized key"));
+	    if (size.length == 0)
+		throw new KVException(new KVMessage("resp", keyString, null, false, "Empty key"));
+
+	    try{
+		if(dataCache.get(key) == null && dataStore.get(key) == null) {
+		    throw new KVException(new KVMessage("resp", keyString, null, false, "Does not exist"));			
+		}
+	    }
+	    catch (KVException e) {
+		throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+	    }	
+
+	    dataCache.del(key);
+	    try{
+		synchronized (dataStore) {
+		    dataStore.del(key);
+		}
+	    } catch (KVException e) {
+		throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
+	    }
 	}
 }
 

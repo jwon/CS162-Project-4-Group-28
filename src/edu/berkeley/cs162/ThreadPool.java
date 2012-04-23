@@ -29,11 +29,14 @@
  */
 package edu.berkeley.cs162;
 
+import java.util.*;
+
 public class ThreadPool {
 	/**
 	 * Set of threads in the threadpool
 	 */
 	protected Thread threads[] = null;
+	protected LinkedList<Runnable> queueOfTasks = new LinkedList<Runnable>();
 
 	/**
 	 * Initialize the number of threads required in the threadpool. 
@@ -43,6 +46,11 @@ public class ThreadPool {
 	public ThreadPool(int size)
 	{
 		// implement me
+		threads = new Thread[size];
+		for(int i = 0; i < size; i++){
+			threads[i] = new WorkerThread(this);
+			threads[i].start();
+		}
 	}
 
 	/**
@@ -54,6 +62,10 @@ public class ThreadPool {
 	public void addToQueue(Runnable r) throws InterruptedException
 	{
 		// implement me
+		synchronized(queueOfTasks){
+			queueOfTasks.add(r);
+			queueOfTasks.notify();
+		}
 	}
 }
 
@@ -61,12 +73,15 @@ public class ThreadPool {
  * The worker threads that make up the thread pool.
  */
 class WorkerThread extends Thread {
+	protected ThreadPool myThreadPool;
+
 	/**
 	 * @param o the thread pool 
 	 */
 	WorkerThread(ThreadPool o)
 	{
 		// implement me
+		this.myThreadPool = o;
 	}
 
 	/**
@@ -75,5 +90,26 @@ class WorkerThread extends Thread {
 	public void run()
 	{
 		// implement me
+		Runnable first;
+
+		while(true){
+			synchronized (myThreadPool.queueOfTasks){
+				while(myThreadPool.queueOfTasks.isEmpty()){
+					try{
+						myThreadPool.queueOfTasks.wait();
+					} catch (InterruptedException e) {
+						System.out.println(e);
+					}
+				}
+
+				first = myThreadPool.queueOfTasks.pollFirst();
+
+				try{
+					first.run();
+				} catch (Exception e){
+					System.out.println(e);
+				}
+			}
+		}
 	}
 }

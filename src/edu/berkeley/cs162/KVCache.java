@@ -29,12 +29,19 @@ package edu.berkeley.cs162;
 
 import java.io.Serializable;
 
+import java.net.*;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.concurrent.locks.Lock;
 /**
  * An LRU cache which has a fixed maximum number of elements (cacheSize).
  * If the cache is full and another entry is added, the LRU (least recently used) entry is dropped.
  */
 public class KVCache<K extends Serializable, V extends Serializable> implements KeyValueInterface<K, V>{
 	private int cacheSize;
+	private HashMap<K,V> cache;
+	private LinkedList<K> order;
 
 	/**
 	 * Creates a new LRU cache.
@@ -42,6 +49,9 @@ public class KVCache<K extends Serializable, V extends Serializable> implements 
 	 */
 	public KVCache (int cacheSize) {
 		// implement me
+		cache = new HashMap<K, V>(cacheSize);
+		order = new LinkedList<K>();
+		this.cacheSize = cacheSize;
 	}
 
 	/**
@@ -52,7 +62,12 @@ public class KVCache<K extends Serializable, V extends Serializable> implements 
 	 */
 	public V get (K key) {
 		// implement me
-		return null;
+		V value;
+		value = cache.get(key);
+		if (value!=null){
+			this.updateLRUOrder(key);
+		}
+		return value;
 	}
 
 	/**
@@ -66,7 +81,30 @@ public class KVCache<K extends Serializable, V extends Serializable> implements 
 	 */
 	public boolean put (K key, V value) {
 		// implement me
-		return false;
+		V existing = cache.get(key);
+		updateLRUOrder(key);
+
+		synchronized(cache){
+			cache.put(key, value);
+			while(cache.size()>cacheSize){
+				synchronized(order){
+					K toRemove = order.remove();
+					cache.remove(toRemove);
+				}
+			}
+		}
+
+		if (existing!=null){
+			return true;
+		}
+		else return false;
+	}
+
+	private void updateLRUOrder(K key){
+		synchronized(order){
+			order.remove(key);
+			order.add(key);
+		}
 	}
 
 	/**
@@ -75,5 +113,16 @@ public class KVCache<K extends Serializable, V extends Serializable> implements 
 	 */
 	public void del (K key) {
 		// implement me
+		synchronized(order){
+			order.remove(key);
+		}
+		synchronized(cache){
+			cache.remove(key);
+		}
+	}
+
+	//this method for testing purposes only
+	public int filledEntries(){
+		return cache.size();
 	}
 } // end class LRUCache
