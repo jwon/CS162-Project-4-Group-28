@@ -59,12 +59,12 @@ public class KVMessage implements Serializable {
 	public KVMessage(String msgType) {
 		this.msgType = msgType;
 	}
-	
+
 	public KVMessage(String msgType, String message) {
 		this.msgType = msgType;
 		this.message = message;
 	}
-	
+
 	public KVMessage(KVMessage kvm) {
 		this.msgType = kvm.msgType;
 		this.key = kvm.key;
@@ -79,22 +79,22 @@ public class KVMessage implements Serializable {
 		this.key = key;
 		this.value = value;
 	}
-	
+
 	/* Hack for ensuring XML libraries does not close input stream by default.
 	 * Solution from http://weblogs.java.net/blog/kohsuke/archive/2005/07/socket_xml_pitf.html */
 	private class NoCloseInputStream extends FilterInputStream {
-	    public NoCloseInputStream(InputStream in) {
-	        super(in);
-	    }
-	    
-	    public void close() {} // ignore close
+		public NoCloseInputStream(InputStream in) {
+			super(in);
+		}
+
+		public void close() {} // ignore close
 	}
-	
+
 	public KVMessage(InputStream input) throws KVException {
 		// implement me	
 	}
 
-	
+
 	/**
 	 * Generate the XML representation for this message.
 	 * @return the XML String
@@ -103,26 +103,26 @@ public class KVMessage implements Serializable {
 		// implement me
 		return null;
 	}
-	
+
 	/**
 	 * Encode Object to base64 String 
 	 * @param obj
 	 * @return
 	 */
 	public static String encodeObject(Object obj) throws KVException {
-        String encoded = null;
-        try{
-            ByteArrayOutputStream bs = new ByteArrayOutputStream();
-            ObjectOutputStream os = new ObjectOutputStream(bs);
-            os.writeObject(obj);
-            byte [] bytes = bs.toByteArray();
-            encoded = DatatypeConverter.printBase64Binary(bytes);
-            bs.close();
-            os.close();
-        } catch(IOException e) {
-            throw new KVException(new KVMessage("resp", "Unknown Error: Error serializing object"));
-        }
-        return encoded;
+		String encoded = null;
+		try{
+			ByteArrayOutputStream bs = new ByteArrayOutputStream();
+			ObjectOutputStream os = new ObjectOutputStream(bs);
+			os.writeObject(obj);
+			byte [] bytes = bs.toByteArray();
+			encoded = DatatypeConverter.printBase64Binary(bytes);
+			bs.close();
+			os.close();
+		} catch(IOException e) {
+			throw new KVException(new KVMessage("resp", "Unknown Error: Error serializing object"));
+		}
+		return encoded;
 	}
 
 	/**
@@ -133,16 +133,103 @@ public class KVMessage implements Serializable {
 	public static Object decodeObject(String str) throws KVException {
 		Object obj = null;
 		try{
-	        byte[] decoded = DatatypeConverter.parseBase64Binary(str);
-	        ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(decoded));
-	        obj = is.readObject();
-	        is.close();
+			byte[] decoded = DatatypeConverter.parseBase64Binary(str);
+			ObjectInputStream is = new ObjectInputStream(new ByteArrayInputStream(decoded));
+			obj = is.readObject();
+			is.close();
 		} catch(IOException e) {
-	        throw new KVException(new KVMessage("resp", "Unknown Error: Unable to decode object"));
+			throw new KVException(new KVMessage("resp", "Unknown Error: Unable to decode object"));
 		}
 		catch (ClassNotFoundException e) {
-	        throw new KVException(new KVMessage("resp", "Unknown Error: Decoding object class not found"));
+			throw new KVException(new KVMessage("resp", "Unknown Error: Decoding object class not found"));
 		}
 		return obj;
 	}
+
+	//crap from proj3
+
+	/** Read the object from Base64 string. */
+	public static Object unmarshal(String s) throws IOException, ClassNotFoundException {
+		byte [] data = DatatypeConverter.parseBase64Binary(s);
+		//byte [] data = s.getBytes("UTF-8");
+		ObjectInputStream ois = new ObjectInputStream(new ByteArrayInputStream(data));
+		Object o  = ois.readObject();
+		ois.close();
+		return o;
+	}
+
+	/** Write the object to a Base64 string. */
+	public static String marshal( Serializable o ) {
+		if(o == null){
+			return null;
+		}
+
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		try {
+			ObjectOutputStream oos = new ObjectOutputStream( baos );
+			oos.writeObject( o );
+			oos.close();
+		} catch (IOException e) {
+		}
+
+		//        try {
+			//			return baos.toString("UTF-8");
+		//        	
+		//		} catch (UnsupportedEncodingException e) {
+		//			return "";
+		//		}
+		return DatatypeConverter.printBase64Binary(baos.toByteArray());
+	}
+
+	public KVMessage(String msgType, Serializable key, Serializable value, boolean status, String message) {
+
+		this.msgType = msgType;
+		this.key = marshal(key);
+		this.value = marshal(value);
+		this.message = message;
+
+	}
+
+	public KVMessage(String msgType, Serializable key, Serializable value, String status, String message) {
+		this(msgType, key, value, false, message);
+		this.status = status;
+	}
+	
+	public String getMessage(){
+		return message;
+	}
+	
+	public boolean getStatus(){
+		return Boolean.parseBoolean(status);
+	}
+	
+	public String getValue() {
+		return value;
+	}
+	
+	public void setMessage(String message) {
+		this.message = message;
+	}
+	
+	public void setStatus(boolean status) {
+		if (status) this.status = "True";
+		else this.status = "False";
+	}
+	
+	public void setMsgType(String msgType) {
+		this.msgType = msgType;
+	}
+	
+	public String getMsgType() {
+		return msgType;
+	}
+	
+	public void setKey(String key) {
+		this.key = key;
+	}
+	
+	public String getKey() {
+		return key;
+	}
+	
 }
