@@ -145,6 +145,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * Start registration server in a separate thread
 	 */
 	public void run() {
+		TPCRegistrationHandler regHandler = new TPCRegistrationHandler();
+		regHandler.handle(client);
 		// implement me
 	}
 	

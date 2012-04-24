@@ -34,6 +34,9 @@ import javax.crypto.BadPaddingException;
 import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.KeyGenerator;
 import javax.crypto.SecretKey;
+
+import com.sun.corba.se.impl.oa.poa.ActiveObjectMap.Key;
+
 import java.security.InvalidKeyException;
 
 public class KVCrypt {
@@ -44,6 +47,11 @@ public class KVCrypt {
 
     public void setUp() throws Exception {
     	// implement me
+    	KeyGenerator makeKey = KeyGenerator.getInstance(algorithm);
+    	makeKey.init(168);
+    	key = makeKey.generateKey();
+    	keyStr = key.toString();
+    	cipher = Cipher.getInstance(algorithm);
     }
 
     public byte[] encrypt(String input)
@@ -51,7 +59,10 @@ public class KVCrypt {
                BadPaddingException,
                IllegalBlockSizeException {
     	// implement me
-    	return null;
+    	cipher.init(Cipher.ENCRYPT_MODE, key);
+    	byte[] inputBytes = input.getBytes();
+    	byte[] encrypted = cipher.doFinal(inputBytes);
+    	return encrypted;
     }
 
     public String decrypt(byte[] encryptionBytes)
@@ -59,6 +70,9 @@ public class KVCrypt {
                BadPaddingException,
                IllegalBlockSizeException {
     	// implement me
-    	return null;
+    	cipher.init(Cipher.DECRYPT_MODE, key);
+    	byte[] decrypted = cipher.doFinal(encryptionBytes);
+    	String actualMessage = decrypted.toString();
+    	return actualMessage;
       }
 }
