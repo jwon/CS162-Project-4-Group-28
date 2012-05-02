@@ -84,6 +84,13 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		 */
 		public SlaveInfo(String slaveInfo) throws KVException {
 			// implement me
+			slaveID = Long.valueOf(slaveInfo.substring(0, slaveInfo.indexOf('@')));
+			hostName = slaveInfo.substring(slaveInfo.indexOf('@')+1, slaveInfo.indexOf(':'));
+			port = Integer.valueOf(slaveInfo.substring(slaveInfo.indexOf(':')+1));
+			
+			kvClient = new KVClient(hostname, port);
+			
+			//how to initialize kvSocket?
 		}
 		
 		public long getSlaveID() {
