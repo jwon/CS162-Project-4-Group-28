@@ -53,7 +53,6 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 		this.logPath = logPath;
 		this.keyServer = keyServer;
 		entries = null;
-		this.keyServer = keyServer;
 	}
 
 	public ArrayList<KVMessage> getEntries() {
