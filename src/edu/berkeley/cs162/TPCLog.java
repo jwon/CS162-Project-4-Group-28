@@ -46,6 +46,7 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 	
 	public TPCLog(String logPath, KeyServer<K, V> keyServer) {
 		this.logPath = logPath;
+		this.keyServer = keyServer;
 		entries = null;
 	}
 
@@ -58,7 +59,8 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 	}
 	
 	public void appendAndFlush(KVMessage entry) {
-		// implement me
+	    entries.add(entry);
+	    flushToDisk();
 	}
 
 	/**
@@ -117,6 +119,15 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 	 * @throws KVException
 	 */
 	public void rebuildKeyServer() throws KVException {
-		// implement me
+	    loadFromDisk();
+	    for (int i = 0; i < entries.size(), i++) {
+		KVMessage entry = entries.get(i);
+		K key = entry.getKey; //is this already unmarshalled, or do we unmarshall it?
+		V value = entry.getValue;
+		if (entry.getMessage = "put") //i don't know if this is how the messages work
+		    keyServer.put(key, value);
+		else if (entry.getMessage = "del")
+		    keyServer.del(key);
+	    }
 	}
 }
