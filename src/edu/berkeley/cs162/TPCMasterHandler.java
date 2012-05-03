@@ -109,85 +109,32 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			KVMessage response = null;
 			String xml;
 			
-			//Is part of the "prepare" message from coordinator part in the 2PC Diagram
+			
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("getreq")) {
-				V value = null;
-				try {
-					value = (V)KVMessage.unmarshal((String)keyserver.get((K)message.getKey()));
-					response = new KVMessage("resp" , message.getKey(), value, null, "Success");
-				} catch (IOException e) {
-					response = new KVMessage("resp", null, null, null, "IO Error");
-				} catch (ClassNotFoundException e) {
-					response = new KVMessage("resp", null, null, null, "Unkown Error: Class Not Found");
-				} catch (KVException e) {
-					response = new KVMessage("resp", null, 
-							null, null, e.getMsg().getMessage());	
-				} finally {
-					xml = response.toXML();
-					byte[] xmlBytes = xml.getBytes();
-					try {
-						fos.write(xmlBytes);
-						fos.flush();
-						s1.shutdownOutput();
-					} catch (IOException e){
-						e.printStackTrace();
-					}
-				}
+			
 			}//End of GET
 			
 			//Is part of the "prepare" message from coordinator in the 2PC Diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("putreq")){
-				try {
-					boolean result = keyserver.put((K)message.getKey(),(V)message.getValue());
-					String resultString; if (result) resultString = "True"; else resultString = "False";
-					response = new KVMessage("resp" , null, null, resultString, "Success");
-				} catch (KVException e) {
-					response = new KVMessage("resp", null, 
-							null, null, e.getMsg().getMessage());
-				} finally {
-					xml = response.toXML();
-					byte[] xmlBytes = xml.getBytes();
-						//System.out.println("Beginning response send");
-					try{
-						fos.write(xmlBytes);
-						fos.flush();
-						s1.shutdownOutput();
-					} catch (IOException e){
-						e.printStackTrace();
-					}
-				}
+			
 			}//End of PUT
 			
 			//Is part of the "Prepare" message from coordinator in 2PC diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("delreq")){
-				try {
-					keyserver.del((K) message.getKey());
-					response = new KVMessage("resp" , null, null, null, "Success");
-				} catch (KVException e) {
-					response = new KVMessage("resp", null, 
-							null, null, e.getMsg().getMessage());
-				} finally {
-					xml = response.toXML();
-					byte[] xmlBytes = xml.getBytes();
-					try{
-						fos.write(xmlBytes);
-						fos.flush();
-						s1.shutdownOutput();
-					} catch (IOException e){
-						e.printStackTrace();
-					}
-				}
+				
 			}//End of DEL
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
+			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("commit")){
 				
 			}
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
+			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("abort")){
 				
 			}
