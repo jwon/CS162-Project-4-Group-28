@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.TreeSet;
 
 public class TPCMaster<K extends Serializable, V extends Serializable>  {
@@ -42,6 +43,9 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * SlaveServers.
 	 * 
 	 */
+	
+	ArrayList<SlaveInfo> slaves = new ArrayList<SlaveInfo>();
+	
 	private class TPCRegistrationHandler implements NetworkHandler {
 
 		private ThreadPool threadpool = null;
@@ -54,10 +58,68 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		public TPCRegistrationHandler(int connections) {
 			threadpool = new ThreadPool(connections);	
 		}
+		
+		public class runReg implements Runnable{
+			Socket regClient = null;
+			
+			public runReg(Socket client){
+				this.regClient = client;
+			}
+			
+			public void run(){
+				KVMessage msg = null;
+				
+				try{
+					msg = new KVMessage(regClient.getInputStream());
+				} catch (KVException e1){
+					
+				} catch (IOException e2){
+					
+				}
+				
+				if (msg.getmsgType().equals("register")){
+					SlaveInfo slave = null;
+					try{
+						slave = new SlaveInfo(msg.getMessage());
+					} catch (KVException e){
+						
+					}
+					
+					slaves.add(slave);
+					
+					FilterOutputStream fos = null;
 
+					//try-catch this
+					fos = new FilterOutputStream(s.getOutputStream());
+					fos.flush();
+
+					KVMessage regACK = new KVMessage("resp", "Successfully registered " + slave.slaveID+"@"+slave.hostname+":"+slave.port);
+					String xml = regACK.toXML();
+					System.out.println("REGISTRATION ACK: " + xml);
+					
+					//try-catch this
+					byte [] xmlBytes = xml.getBytes();
+					fos.write(xmlBytes);
+					fos.flush();
+
+					s.close();
+					fos.close();
+					
+					//try-catch this
+					regClient.close()
+				}
+			}
+		}
 		@Override
 		public void handle(Socket client) throws IOException {
 			// implement me
+			
+			Runnable r = new runReg(client);
+			try{
+				threadpool.addToQueue(r);
+			}catch (InterruptedException e){
+				
+			}
 		}
 	}
 	
@@ -88,7 +150,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			hostName = slaveInfo.substring(slaveInfo.indexOf('@')+1, slaveInfo.indexOf(':'));
 			port = Integer.valueOf(slaveInfo.substring(slaveInfo.indexOf(':')+1));
 			
-			kvClient = new KVClient(hostName, port);
+			//kvClient = new KVClient(hostName, port);
 			
 			//how to initialize kvSocket?
 			//We don't need to, just use the setKvSocket method
