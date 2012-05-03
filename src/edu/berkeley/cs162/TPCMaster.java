@@ -119,9 +119,6 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 						e.printStackTrace();
 					}
 					
-					
-					//try-catch this
-					;
 				}
 			}
 		}
