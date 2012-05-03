@@ -97,6 +97,84 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 		}
 		
 		public void run(){
+			System.out.println("Calling Run");
+			FilterOutputStream fos = null;
+			try {
+				fos = new FilterOutputStream(s1.getOutputStream());
+				fos.flush();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			
+			KVMessage response = null;
+			String xml;
+			if(message.getMsgType().equals("getreq")) {
+				V value = null;
+				try {
+					value = (V)KVMessage.unmarshal((String)keyserver.get((K)message.getKey()));
+					response = new KVMessage("resp" , message.getKey(), value, null, "Success");
+				} catch (IOException e) {
+					response = new KVMessage("resp", null, null, null, "IO Error");
+				} catch (ClassNotFoundException e) {
+					response = new KVMessage("resp", null, null, null, "Unkown Error: Class Not Found");
+				} catch (KVException e) {
+					response = new KVMessage("resp", null, 
+							null, null, e.getMsg().getMessage());	
+				} finally {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
+					try {
+						fos.write(xmlBytes);
+						fos.flush();
+						s1.shutdownOutput();
+					} catch (IOException e){
+						e.printStackTrace();
+					}
+				}
+			}//End of GET
+			
+			if(message.getMsgType().equals("putreq")){
+				try {
+					boolean result = keyserver.put((K)message.getKey(),(V)message.getValue());
+					String resultString; if (result) resultString = "True"; else resultString = "False";
+					response = new KVMessage("resp" , null, null, resultString, "Success");
+				} catch (KVException e) {
+					response = new KVMessage("resp", null, 
+							null, null, e.getMsg().getMessage());
+				} finally {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
+						//System.out.println("Beginning response send");
+					try{
+						fos.write(xmlBytes);
+						fos.flush();
+						s1.shutdownOutput();
+					} catch (IOException e){
+						e.printStackTrace();
+					}
+				}
+			}//End of PUT
+			
+			if(message.getMsgType().equals("delreq")){
+				try {
+					keyserver.del((K) message.getKey());
+					response = new KVMessage("resp" , null, null, null, "Success");
+				} catch (KVException e) {
+					response = new KVMessage("resp", null, 
+							null, null, e.getMsg().getMessage());
+				} finally {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
+					try{
+						fos.write(xmlBytes);
+						fos.flush();
+						s1.shutdownOutput();
+					} catch (IOException e){
+						e.printStackTrace();
+					}
+				}
+			}//End of DEL
+			
 			
 		}
 	}
