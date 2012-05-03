@@ -29,12 +29,12 @@
  */
 package edu.berkeley.cs162;
 
-import java.io.BufferedReader;
 import java.io.FilterOutputStream;
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Serializable;
 import java.net.Socket;
+import java.util.Dictionary;
+import java.util.Hashtable;
 
 
 /**
@@ -47,6 +47,9 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 	private ThreadPool threadpool = null;
 	private TPCLog<K, V> tpcLog = null;
 	
+	//Saves state across connections
+	private Dictionary<String, KVMessage> opIdToOperation = null; 
+	
 	private boolean ignoreNext = false;
 
 	public TPCMasterHandler(KeyServer<K, V> keyserver) {
@@ -55,7 +58,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 
 	public TPCMasterHandler(KeyServer<K, V> keyserver, int connections) {
 		this.keyserver = keyserver;
-		threadpool = new ThreadPool(connections);	
+		threadpool = new ThreadPool(connections);
+		opIdToOperation = new Hashtable<String, KVMessage>();
 	}
 
 	@Override
@@ -132,6 +136,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 						fos.write(xmlBytes);
 						fos.flush();
 						s1.shutdownOutput();
+						s1.close();
 					} catch (IOException e){
 						e.printStackTrace();
 					}
@@ -141,6 +146,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Is part of the "prepare" message from coordinator in the 2PC Diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("putreq")){
+				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
@@ -148,6 +154,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -156,6 +164,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Is part of the "Prepare" message from coordinator in 2PC diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("delreq")){
+				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
@@ -163,6 +172,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -170,22 +181,39 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//Send an ACK back to the coordinator
-			//TODO: Need a way keep state across connections or implement two messages per socket
 			if(message.getMsgType().equals("commit")){
 				//Perform the operation
-				
-				//Respond with ACK to the coordinator
 				response = new KVMessage("ack");
 				response.setTpcOpId(message.getTpcOpId());
+				KVMessage commitOp = opIdToOperation.get(message.getTpcOpId());
+				if(commitOp.getMsgType().equals("putreq")){
+					try {
+						keyserver.put((K)commitOp.getKey(),(V)commitOp.getValue());
+					} catch (KVException e) {
+						response = new KVMessage("resp", null, 
+								null, null, e.getMsg().getMessage());	
+					}
+				} else if(commitOp.getMsgType().equals("delreq")){
+					try {
+						keyserver.del((K)commitOp.getKey());
+					} catch (KVException e) {
+						response = new KVMessage("resp", null, 
+								null, null, e.getMsg().getMessage());	
+					}
+				}
+				
+				//Respond with ACK or KVException to the coordinator
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
+			}//End Commit
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
@@ -198,10 +226,12 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
+			}//End ACK
 			
 		}
 	}
@@ -212,78 +242,6 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 	 */
 	public void setTPCLog(TPCLog<K, V> tpcLog) {
 		this.tpcLog  = tpcLog;
-	}
-	
-	public class MultiXMLDocReader extends Reader {
-	    private BufferedReader reader;
-	    private String buffer;
-	    private int bufferPos;
-	    private boolean firstDocument;
-	    private boolean realEOF;
-	    private boolean enforceEOF;
-
-	    public MultiXMLDocReader(Reader reader) {
-	        this.reader = new BufferedReader(reader);
-	        firstDocument = true;
-	        buffer = "";
-	        bufferPos = 0;
-	        realEOF = enforceEOF = false;
-	    }
-
-	    @Override
-	    public void close() throws IOException {
-	        enforceEOF = false;
-	        if (realEOF) reader.close();
-	    }
-
-	    @Override
-	    public int read() throws IOException {
-	        char[] buffer = new char[1];
-	        int result = read(buffer, 0, 1);
-	        if (result < 0) return -1;
-	        return buffer[0];
-	    }
-
-	    @Override
-	    public int read(char[] cbuf, int off, int len) throws IOException {
-	        if (enforceEOF) return -1;
-	        int lenLeft = len;
-	        int read = 0;
-	        while (lenLeft > 0) {
-	            if (buffer.length()>0) {
-	                char[] lbuffer = buffer.toCharArray();
-	                int bufLen = buffer.length() - bufferPos;
-	                int newBufferPos = 0;
-	                if (lenLeft < bufLen) {
-	                    bufLen = lenLeft;
-	                    newBufferPos = bufferPos + bufLen;
-	                }
-	                else buffer = "";
-	                System.arraycopy(lbuffer, bufferPos, cbuf, off, bufLen);
-	                read += bufLen;
-	                lenLeft -= bufLen;
-	                off += bufLen;
-	                bufferPos = newBufferPos;
-	                continue;
-	            }
-	            buffer = reader.readLine();
-	            if (buffer == null) {
-	                realEOF = true;
-	                enforceEOF = true;
-	                return (read == 0 ? -1 : read);
-	            }
-	            else
-	                buffer += "\n";
-	            if (buffer.startsWith("<?xml")) {
-	                if (firstDocument) firstDocument = false;
-	                else {
-	                    enforceEOF = true;
-	                    return (read == 0 ? -1 : read);
-	                }
-	            }
-	        }
-	        return read;
-	    }
 	}
 
 }
