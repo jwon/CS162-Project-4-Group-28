@@ -30,6 +30,7 @@
 package edu.berkeley.cs162;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
@@ -327,6 +328,17 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			System.out.print(e.getMessage());
 			e.printStackTrace();
 		}
+		
+		OutputStream firstMsg;
+		
+		try {
+			firstMsg = firstSocket.getOutputStream();
+		} catch (IOException e) {
+			System.out.println("IOException line 335");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
 		/*
 
 		try to receive TPCMessages from firstSocket and secondSocket:
