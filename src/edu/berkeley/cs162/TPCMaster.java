@@ -88,9 +88,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			hostName = slaveInfo.substring(slaveInfo.indexOf('@')+1, slaveInfo.indexOf(':'));
 			port = Integer.valueOf(slaveInfo.substring(slaveInfo.indexOf(':')+1));
 			
-			kvClient = new KVClient(hostname, port);
+			kvClient = new KVClient(hostName, port);
 			
 			//how to initialize kvSocket?
+			//We don't need to, just use the setKvSocket method
 		}
 		
 		public long getSlaveID() {
