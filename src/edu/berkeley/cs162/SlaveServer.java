@@ -29,7 +29,9 @@
  */
 package edu.berkeley.cs162;
 
+import java.io.FilterOutputStream;
 import java.net.InetAddress;
+import java.net.Socket;
 
 public class SlaveServer {
 	static String logPath = null;
