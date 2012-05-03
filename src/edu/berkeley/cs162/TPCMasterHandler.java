@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.Socket;
 
+
 /**
  * Implements NetworkHandler to handle 2PC operation requests from the Master/
  * Coordinator Server
@@ -58,6 +59,16 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 	@Override
 	public void handle(Socket client) throws IOException {
 		// implement me
+		System.out.println("handle called");
+		ConnectionHandler newTask = new ConnectionHandler(client);
+		System.out.println("Adding to threadpool");
+		if(newTask.failed == false){
+			try {
+				threadpool.addToQueue(newTask);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	private class ConnectionHandler implements Runnable {
@@ -69,7 +80,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 		
 		public ConnectionHandler(Socket client) throws IOException{
 			this.s1 = client;
-			KVMessage response = new KVMessage("resp", null, null);; //If there's an error getting the message, sent this back
+			KVMessage response = new KVMessage("resp", null, null);; //If there's an error getting the message, send this back
 			try {
 				message = new KVMessage(s1.getInputStream());
 			} catch (KVException e) {
