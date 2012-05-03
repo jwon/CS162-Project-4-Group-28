@@ -34,8 +34,11 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 import java.util.TreeSet;
+
+import sun.misc.Lock;
 
 public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	
@@ -298,22 +301,48 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * @return True if the TPC operation has succeeded
 	 * @throws KVException
 	 */
+	static Lock writeLock = new Lock();
 	public synchronized boolean performTPCOperation(KVMessage msg, boolean isPutReq) throws KVException {
 		// the following is pseudocode. write it up as you go along
 		
+		try {
+			//aquires the writelock
+			writeLock.lock();
+		} catch (InterruptedException e) {
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+
+		//key = get msg’s key;
+		String key = msg.getKey();
 		
-		/*get the writeLock;
-
-		key = get msg’s key;
-		firstSocket = get the kvSocket of findFirstReplica(key);
-		secondSocket = get the kvSocket of findSuccessor(findFirstReplica(key));
-
-		req = a new TPCMessage with the msgType of msg and applicable fields;
-
-		stream req to firstSocket;
-		stream req to secondSocket;
-
-		set timeout for firstSocket, secondSocket;
+		//firstSocket = get the kvSocket of findFirstReplica(key);
+		SlaveInfo slave = findFirstReplica((K)key);
+		Socket firstSocket = slave.getKvSocket();
+		
+		//secondSocket = get the kvSocket of findSuccessor(findFirstReplica(key));
+		SlaveInfo slave1 = findSuccessor(slave);
+		Socket secondSocket = slave1.getKvSocket();
+		
+		//req = a new TPCMessage with the msgType of msg and applicable fields;
+		//not finished yet(if u notice the allcaps message
+		KVMessage req = new KVMessage("msg", "WTF IS THIS MESSAGE SUPPOSED TO BE");
+		
+		
+		//THE FOLLOWING TWO LINES STILL NEED TO BE IMPLEMENTED FUUUUUUUUUUUUUUUUUUUUUU...
+		//stream req to firstSocket;
+		//stream req to secondSocket;
+		
+		//set timeout for firstSocket, secondSocket;
+		try {
+			firstSocket.setSoTimeout(5000);
+			secondSocket.setSoTimeout(5000);
+		} catch (SocketException e) {
+			System.out.print("Got a Socket Exception line 259");
+			System.out.print(e.getMessage());
+			e.printStackTrace();
+		}
+		/*
 
 		try to receive TPCMessages from firstSocket and secondSocket:
 		if either socket times out:
