@@ -38,6 +38,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 
+import javax.crypto.SecretKey;
 import javax.xml.bind.DatatypeConverter;
 
 
@@ -232,4 +233,7 @@ public class KVMessage implements Serializable {
 		return key;
 	}
 	
+	public SecretKey getEnKey(){
+		return KVCrypt.getKey();
+	}
 }
