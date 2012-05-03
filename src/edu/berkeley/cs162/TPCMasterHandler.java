@@ -112,31 +112,92 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("getreq")) {
-			
+				V value = null;
+				try {
+					value = (V)KVMessage.unmarshal((String)keyserver.get((K)message.getKey()));
+					response = new KVMessage("resp" , message.getKey(), value, null, "Success");
+				} catch (IOException e) {
+					response = new KVMessage("resp", null, null, null, "IO Error");
+				} catch (ClassNotFoundException e) {
+					response = new KVMessage("resp", null, null, null, "Unkown Error: Class Not Found");
+				} catch (KVException e) {
+					response = new KVMessage("resp", null, 
+							null, null, e.getMsg().getMessage());	
+				} finally {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
+					try {
+						fos.write(xmlBytes);
+						fos.flush();
+						s1.shutdownOutput();
+					} catch (IOException e){
+						e.printStackTrace();
+					}
+				}
 			}//End of GET
 			
 			//Is part of the "prepare" message from coordinator in the 2PC Diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("putreq")){
-			
+				response = new KVMessage("Ready");
+				response.setTpcOpId(message.getTpcOpId());
+				xml = response.toXML();
+				byte[] xmlBytes = xml.getBytes();
+				try {
+					fos.write(xmlBytes);
+					fos.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}//End of PUT
 			
 			//Is part of the "Prepare" message from coordinator in 2PC diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("delreq")){
-				
+				response = new KVMessage("Ready");
+				response.setTpcOpId(message.getTpcOpId());
+				xml = response.toXML();
+				byte[] xmlBytes = xml.getBytes();
+				try {
+					fos.write(xmlBytes);
+					fos.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}//End of DEL
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("commit")){
+				//Perform the operation
 				
+				//Respond with ACK to the coordinator
+				response = new KVMessage("ack");
+				response.setTpcOpId(message.getTpcOpId());
+				xml = response.toXML();
+				byte[] xmlBytes = xml.getBytes();
+				try {
+					fos.write(xmlBytes);
+					fos.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("abort")){
-				
+				//Respond with ACK to the coordinator
+				response = new KVMessage("ack");
+				response.setTpcOpId(message.getTpcOpId());
+				xml = response.toXML();
+				byte[] xmlBytes = xml.getBytes();
+				try {
+					fos.write(xmlBytes);
+					fos.flush();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
 			}
 			
 		}

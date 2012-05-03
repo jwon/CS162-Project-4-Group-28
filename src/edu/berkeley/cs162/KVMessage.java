@@ -236,4 +236,12 @@ public class KVMessage implements Serializable {
 	public SecretKey getEnKey(){
 		return KVCrypt.getKey();
 	}
+	
+	public void setTpcOpId(String opID) {
+		this.tpcOpId = opID;
+	}
+	
+	public String getTpcOpId() {
+		return this.tpcOpId;
+	}
 }
