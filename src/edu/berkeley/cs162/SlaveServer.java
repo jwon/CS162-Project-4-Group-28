@@ -85,6 +85,26 @@ public class SlaveServer {
 		
 		// Register with the Master
 		// implement me
+		SocketServer regServer = new SocketServer(masterHostName, registrationPort);
+		Socket s = regServer.server.accept();
+
+		FilterOutputStream fos = null;
+
+		//try-catch this
+		fos = new FilterOutputStream(s.getOutputStream());
+		fos.flush();
+
+		KVMessage regMessage = new KVMessage("register", slaveID+"@"+server.hostname+":"+server.port);
+		String xml = regMessage.toXML();
+		System.out.println("REGISTRATION XML: " + xml);
+		
+		//try-catch this
+		byte [] xmlBytes = xml.getBytes();
+		fos.write(xmlBytes);
+		fos.flush();
+
+		s.close();
+		fos.close();
 	}
 
 }
