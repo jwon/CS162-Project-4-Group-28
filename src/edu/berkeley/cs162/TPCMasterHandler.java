@@ -108,6 +108,9 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			
 			KVMessage response = null;
 			String xml;
+			
+			//Is part of the "prepare" message from coordinator part in the 2PC Diagram
+			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("getreq")) {
 				V value = null;
 				try {
@@ -133,6 +136,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				}
 			}//End of GET
 			
+			//Is part of the "prepare" message from coordinator in the 2PC Diagram
+			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("putreq")){
 				try {
 					boolean result = keyserver.put((K)message.getKey(),(V)message.getValue());
@@ -155,6 +160,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				}
 			}//End of PUT
 			
+			//Is part of the "Prepare" message from coordinator in 2PC diagram
+			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("delreq")){
 				try {
 					keyserver.del((K) message.getKey());
@@ -175,6 +182,15 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				}
 			}//End of DEL
 			
+			//Is part of the "Decision" message from coordinator in the 2PC diagram
+			if(message.getMsgType().equals("commit")){
+				
+			}
+			
+			//Is part of the "Decision" message from coordinator in the 2PC diagram
+			if(message.getMsgType().equals("abort")){
+				
+			}
 			
 		}
 	}
