@@ -167,7 +167,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			}//End of DEL
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
-			//TODO: Send an ACK back to the coordinator
+			//Send an ACK back to the coordinator
+			//TODO: Need a way keep state across connections or implement two messages per socket
 			if(message.getMsgType().equals("commit")){
 				//Perform the operation
 				

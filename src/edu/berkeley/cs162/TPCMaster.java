@@ -29,6 +29,7 @@
  */
 package edu.berkeley.cs162;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.Serializable;
@@ -81,7 +82,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					
 				}
 				
-				if (msg.getmsgType().equals("register")){
+				if (msg.getMsgType().equals("register")){
 					SlaveInfo slave = null;
 					try{
 						slave = new SlaveInfo(msg.getMessage());
@@ -94,23 +95,33 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					FilterOutputStream fos = null;
 
 					//try-catch this
-					fos = new FilterOutputStream(s.getOutputStream());
-					fos.flush();
+					try {
+						fos = new FilterOutputStream(regClient.getOutputStream());
+						fos.flush();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					
 
-					KVMessage regACK = new KVMessage("resp", "Successfully registered " + slave.slaveID+"@"+slave.hostname+":"+slave.port);
+					KVMessage regACK = new KVMessage("resp", "Successfully registered " + slave.slaveID+"@"+slave.getHostName()+":"+slave.port);
 					String xml = regACK.toXML();
 					System.out.println("REGISTRATION ACK: " + xml);
 					
 					//try-catch this
 					byte [] xmlBytes = xml.getBytes();
-					fos.write(xmlBytes);
-					fos.flush();
-
-					s.close();
-					fos.close();
+					try {
+						fos.write(xmlBytes);
+						fos.flush();
+						fos.close();
+						regClient.close();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+					
 					
 					//try-catch this
-					regClient.close()
+					;
 				}
 			}
 		}
@@ -162,6 +173,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		
 		public long getSlaveID() {
 			return slaveID;
+		}
+		
+		public String getHostName(){
+			return hostName;
 		}
 
 		public KVClient<K, V> getKvClient() {
