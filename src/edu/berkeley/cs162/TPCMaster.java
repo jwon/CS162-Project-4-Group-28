@@ -222,7 +222,39 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * @throws KVException
 	 */
 	public synchronized boolean performTPCOperation(KVMessage msg, boolean isPutReq) throws KVException {
-		// implement me
+		// the following is pseudocode. write it up as you go along
+		
+		
+		/*get the writeLock;
+
+		key = get msg’s key;
+		firstSocket = get the kvSocket of findFirstReplica(key);
+		secondSocket = get the kvSocket of findSuccessor(findFirstReplica(key));
+
+		req = a new TPCMessage with the msgType of msg and applicable fields;
+
+		stream req to firstSocket;
+		stream req to secondSocket;
+
+		set timeout for firstSocket, secondSocket;
+
+		try to receive TPCMessages from firstSocket and secondSocket:
+		if either socket times out:
+		stream abort message to both firstSocket and secondSocket;
+		return false;
+		if both sockets send ready messages:
+		stream ready message to both firstSocket and secondSocket;
+
+				get writeLock of KVCache;
+		update KVCache with operation;
+		get exclusive lock on AccessList;
+		release writeLock;
+		update AccessList;
+		release lock on Accesslist;
+
+		release writeLock;
+
+		return true;*/
 		return false;
 	}
 

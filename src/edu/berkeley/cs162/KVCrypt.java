@@ -83,4 +83,8 @@ public class KVCrypt {
     	String actualMessage = decrypted.toString();
     	return actualMessage;
       }
+    
+    public static SecretKey getKey(){
+    	return key;
+    }
 }
