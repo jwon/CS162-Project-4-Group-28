@@ -29,6 +29,7 @@
  */
 package edu.berkeley.cs162;
 
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.Socket;
@@ -57,6 +58,36 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 	@Override
 	public void handle(Socket client) throws IOException {
 		// implement me
+	}
+	
+	private class ConnectionHandler implements Runnable {
+		
+		Socket s1;
+		KVMessage message;  //Message sent by the master
+		public boolean failed = false; /*If we fail to get the message from the master, 
+		 								 we do not add it to the thread pool		*/
+		
+		public ConnectionHandler(Socket client) throws IOException{
+			this.s1 = client;
+			KVMessage response = new KVMessage("resp", null, null);; //If there's an error getting the message, sent this back
+			try {
+				message = new KVMessage(s1.getInputStream());
+			} catch (KVException e) {
+				FilterOutputStream fos = new FilterOutputStream(s1.getOutputStream());
+				fos.flush();
+				response.setMessage(e.getMsg().getMessage());
+				String xml = response.toXML();
+				byte[] xmlBytes = xml.getBytes();
+				fos.write(xmlBytes);
+				fos.flush();
+				s1.close();
+				failed = true;
+			}
+		}
+		
+		public void run(){
+			
+		}
 	}
 
 	/**
