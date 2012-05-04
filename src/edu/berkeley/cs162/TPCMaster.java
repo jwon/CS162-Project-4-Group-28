@@ -31,6 +31,7 @@ package edu.berkeley.cs162;
 
 import java.io.FilterOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.Serializable;
 import java.net.InetAddress;
@@ -342,12 +343,15 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * @throws KVException
 	 */
 	static Lock writeLock = new Lock();
+	static Lock readLock = new Lock();
+	static Lock KVCacheLock = new Lock();
 	public synchronized boolean performTPCOperation(KVMessage msg, boolean isPutReq) throws KVException {
 		// the following is pseudocode. write it up as you go along
 		
 		try {
-			//aquires the writelock
+			//acquires the writelock
 			writeLock.lock();
+			readLock.lock();
 		} catch (InterruptedException e) {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
@@ -383,27 +387,40 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			e.printStackTrace();
 		}
 		
-		OutputStream firstMsg = null;
+		/*
+		 * try to receive TPCMessages from firstSocket and secondSocket:
+		 * if either socket times out:
+		 * stream abort message to both firstSocket and secondSocket;
+		 * return false;
+		 * if both sockets send ready messages:
+		 * stream ready message to both firstSocket and secondSocket;
+		 */
+		InputStream firstMsg = null;
+		InputStream secondMsg = null;
 		
 		try {
-			firstMsg = firstSocket.getOutputStream();
+			firstMsg = firstSocket.getInputStream();
+			secondMsg = secondSocket.getInputStream();
 		} catch (IOException e) {
 			System.out.println("IOException line 335");
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
 		
-		firstMsg.toString();
+		KVMessage inMsg1 = new KVMessage(firstMsg);
+		KVMessage inMsg2 = new KVMessage(secondMsg);
+		System.out.println("line 403 inMsg1.getMsgType() is "+ inMsg1.getMsgType());
+		System.out.println("line 404 inMsg2.getMsgType() is "+ inMsg2.getMsgType());
+		if (inMsg1.getMsgType()!="ready" || inMsg2.getMsgType()!="ready"){
+			//send abort messages
+			//then return false
+			return false;
+		}
+		else {
+			//send ready messages
+		}
 		
 		/*
-
-		try to receive TPCMessages from firstSocket and secondSocket:
-		if either socket times out:
-		stream abort message to both firstSocket and secondSocket;
-		return false;
-		if both sockets send ready messages:
-		stream ready message to both firstSocket and secondSocket;
-
 				get writeLock of KVCache;
 		update KVCache with operation;
 		get exclusive lock on AccessList;
