@@ -116,6 +116,11 @@ public class SlaveServer {
 			try{
 				//Wait for an ACK
 				s.setSoTimeout(5000);
+				//ACK received (hopefully)
+				KVMessage respMessage = new KVMessage(is);
+				if(respMessage.getMsgType().equals("ack")){
+					ackReceived = true;
+				}
 			} catch(SocketException e){
 				//ACK not received, try sending the message again
 				FilterOutputStream fos1 = null;
@@ -131,12 +136,6 @@ public class SlaveServer {
 				fos1.write(xmlBytes1);
 				fos1.flush();
 				fos1.close();
-			}
-			
-			//ACK received (hopefully)
-			KVMessage respMessage = new KVMessage(is);
-			if(respMessage.getMsgType().equals("ack")){
-				ackReceived = true;
 			}
 		}
 	}
