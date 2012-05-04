@@ -427,7 +427,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		try {
 			KVCacheLock.lock();
 		} catch (InterruptedException e) {
-			System.out.println("excetpion line 429");
+			System.out.println("excetpion line 430");
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
@@ -472,11 +472,15 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		try {
 			readLock.lock();
 		} catch (InterruptedException e) {
-			System.out.println("exception line 456");
+			System.out.println("exception line 475");
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
 		
+		V value = masterCache.get((K)msg.getKey());
+		if (value!=null){
+			return value;
+		}
 		
 		SlaveInfo first = findFirstReplica((K)msg.getKey());
 		V firstValue = first.getKvClient().get((K)msg.getKey());
@@ -496,6 +500,6 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			return secondaryValue;
 		}
 		
-		throw new KVException(new KVMessage("resp", null, null, false, "Get operation failed for both replicas line 468"));
+		throw new KVException(new KVMessage("resp", null, null, false, "Get operation failed for both replicas line 503"));
 	}
 }
