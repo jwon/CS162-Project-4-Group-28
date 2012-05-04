@@ -33,6 +33,8 @@ import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.Socket;
+import java.util.Dictionary;
+import java.util.Hashtable;
 
 
 /**
@@ -45,6 +47,9 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 	private ThreadPool threadpool = null;
 	private TPCLog<K, V> tpcLog = null;
 	
+	//Saves state across connections
+	private Dictionary<String, KVMessage> opIdToOperation = null; 
+	
 	private boolean ignoreNext = false;
 
 	public TPCMasterHandler(KeyServer<K, V> keyserver) {
@@ -53,7 +58,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 
 	public TPCMasterHandler(KeyServer<K, V> keyserver, int connections) {
 		this.keyserver = keyserver;
-		threadpool = new ThreadPool(connections);	
+		threadpool = new ThreadPool(connections);
+		opIdToOperation = new Hashtable<String, KVMessage>();
 	}
 
 	@Override
@@ -130,6 +136,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 						fos.write(xmlBytes);
 						fos.flush();
 						s1.shutdownOutput();
+						s1.close();
 					} catch (IOException e){
 						e.printStackTrace();
 					}
@@ -139,6 +146,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Is part of the "prepare" message from coordinator in the 2PC Diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("putreq")){
+				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
@@ -146,6 +154,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -154,6 +164,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Is part of the "Prepare" message from coordinator in 2PC diagram
 			//TODO: Need to send back a "Response" (READY/ABORT) message
 			if(message.getMsgType().equals("delreq")){
+				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
@@ -161,6 +172,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -168,22 +181,39 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//Send an ACK back to the coordinator
-			//TODO: Need a way keep state across connections or implement two messages per socket
 			if(message.getMsgType().equals("commit")){
 				//Perform the operation
-				
-				//Respond with ACK to the coordinator
 				response = new KVMessage("ack");
 				response.setTpcOpId(message.getTpcOpId());
+				KVMessage commitOp = opIdToOperation.get(message.getTpcOpId());
+				if(commitOp.getMsgType().equals("putreq")){
+					try {
+						keyserver.put((K)commitOp.getKey(),(V)commitOp.getValue());
+					} catch (KVException e) {
+						response = new KVMessage("resp", null, 
+								null, null, e.getMsg().getMessage());	
+					}
+				} else if(commitOp.getMsgType().equals("delreq")){
+					try {
+						keyserver.del((K)commitOp.getKey());
+					} catch (KVException e) {
+						response = new KVMessage("resp", null, 
+								null, null, e.getMsg().getMessage());	
+					}
+				}
+				
+				//Respond with ACK or KVException to the coordinator
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
+			}//End Commit
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
@@ -196,10 +226,12 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				try {
 					fos.write(xmlBytes);
 					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-			}
+			}//End ACK
 			
 		}
 	}

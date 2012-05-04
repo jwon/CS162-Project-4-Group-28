@@ -127,11 +127,11 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 	    loadFromDisk();
 	    for (int i = 0; i < entries.size(), i++) {
 		KVMessage entry = entries.get(i);
-		K key = entry.getKey; //is this already unmarshalled, or do we unmarshall it?
-		V value = entry.getValue;
-		if (entry.getMessage = "put") //i don't know if this is how the messages work
+		K key = KVMessage.unmarshal(entry.getKey());
+		V value = KVMessage.unmarshal(entry.getValue());
+		if (entry.getMsgType() == "putreq") 
 		    keyServer.put(key, value);
-		else if (entry.getMessage = "del")
+		else if (entry.getMsgType() == "delreq")
 		    keyServer.del(key);
 	    }
 	}
