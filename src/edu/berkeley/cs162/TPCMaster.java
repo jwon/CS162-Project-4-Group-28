@@ -344,7 +344,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			e.printStackTrace();
 		}
 		
-		OutputStream firstMsg;
+		OutputStream firstMsg = null;
 		
 		try {
 			firstMsg = firstSocket.getOutputStream();
@@ -353,6 +353,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
+		
+		firstMsg.toString();
 		
 		/*
 
