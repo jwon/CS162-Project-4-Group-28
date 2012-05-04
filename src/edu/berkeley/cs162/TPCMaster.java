@@ -423,11 +423,27 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			//send ready messages
 		}
 
+		//get writeLock of KVCache(this is the access list)
+		try {
+			KVCacheLock.lock();
+		} catch (InterruptedException e) {
+			System.out.println("excetpion line 429");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
+		//update KVCache with operation;
+		if (isPutReq){
+			masterCache.put((K)(msg.getKey()), (V)(msg.getValue()));
+		}
+		else masterCache.del((K)(msg.getKey()));
+		
+		//I HAVEN'T DONE THE FOLLOWING COMMENT
+		//get exclusive lock on AccessList
+		
+		//release writeLock
+		KVCacheLock.unlock();
 		/*
-				get writeLock of KVCache;
-		update KVCache with operation;
-		get exclusive lock on AccessList;
-		release writeLock;
 		update AccessList;
 		release lock on Accesslist;
 
