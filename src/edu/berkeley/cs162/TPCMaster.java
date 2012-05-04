@@ -377,8 +377,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		Socket secondSocket = slave1.getKvSocket();
 
 		//req = a new TPCMessage with the msgType of msg and applicable fields;
-		//not finished yet(if u notice the allcaps message
-		KVMessage req = new KVMessage("msg", "WTF IS THIS MESSAGE SUPPOSED TO BE");
+		KVMessage req = new KVMessage(msg.getMsgType());
 
 
 		//THE FOLLOWING TWO LINES STILL NEED TO BE IMPLEMENTED FUUUUUUUUUUUUUUUUUUUUUU...
