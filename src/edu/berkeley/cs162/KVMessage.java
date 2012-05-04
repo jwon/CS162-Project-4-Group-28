@@ -29,6 +29,7 @@
  */
 package edu.berkeley.cs162;
 
+
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FilterInputStream;
@@ -37,9 +38,27 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
-
+import java.io.StringWriter;
 import javax.crypto.SecretKey;
+
 import javax.xml.bind.DatatypeConverter;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerConfigurationException;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMResult;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.Text;
+
 
 
 /**
@@ -92,7 +111,61 @@ public class KVMessage implements Serializable {
 	}
 
 	public KVMessage(InputStream input) throws KVException {
-		// implement me	
+		
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		DocumentBuilder db;
+		try {
+			db = dbf.newDocumentBuilder();
+		} catch (ParserConfigurationException e) {
+			//System.out.println("throwing exception KVMessage line 145");
+			throw new KVException(new KVMessage("resp", null, null, false, "Unknown error: Unable to initialize DocumentBuilder"));
+		}
+		
+		Document d = db.newDocument();
+		//Element root = d.createElement("KVMessage");
+		
+		TransformerFactory tf = TransformerFactory.newInstance();
+		Transformer t;
+		
+		try {
+			t = tf.newTransformer();
+		} catch (TransformerConfigurationException e) {
+			//System.out.println("throwing exception KVMessage line 158");
+			throw new KVException(new KVMessage("resp", null, null, false, "Unknown error: Unable to initialize Transformer"));
+		}
+		
+		try {
+			t.transform(new StreamSource(new NoCloseInputStream(input)), new DOMResult(d));
+		} catch (TransformerException e) {
+			//System.out.println(e);
+			throw new KVException(new KVMessage("resp", null, null, false, "XML Error: Received unparseable message"));
+		}
+		
+		Element root = (Element)d.getFirstChild();
+		
+		msgType = root.getAttribute("type");
+		
+		Node keyElem = root.getElementsByTagName("Key").item(0);
+		if (keyElem != null) {
+			key = ((Text)keyElem.getFirstChild()).getWholeText();
+//			key = key.substring(9,key.length() - 3);
+		}
+		
+		
+		Node valueElem = root.getElementsByTagName("Value").item(0);
+		if (valueElem != null) {
+			value = ((Text)valueElem.getFirstChild()).getWholeText();
+//			value = value.substring(9,key.length() - 3);
+		}
+		
+		Node statusElem = root.getElementsByTagName("Status").item(0);
+		if (statusElem != null) status = ((Text)statusElem.getFirstChild()).getWholeText();
+		
+		Node messageElem = root.getElementsByTagName("Message").item(0);
+		if (messageElem != null) message = ((Text)messageElem.getFirstChild()).getWholeText();
+		
+		Node tpcOpIdElem = root.getElementsByTagName("TPCOpId").item(0);
+		if (tpcOpIdElem != null) tpcOpId = ((Text)tpcOpIdElem.getFirstChild()).getWholeText();
 	}
 
 
@@ -100,9 +173,67 @@ public class KVMessage implements Serializable {
 	 * Generate the XML representation for this message.
 	 * @return the XML String
 	 */
-	public String toXML() {
-		// implement me
-		return null;
+	public String toXML() throws KVException{
+		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+		DocumentBuilder db;
+		try {
+			db = dbf.newDocumentBuilder();
+		} catch (ParserConfigurationException e) {
+			//System.out.println("throwing exception KVMessage line 214");
+			throw new KVException(new KVMessage("resp", null, null, false, "Unknown error: Unable to initialize DocumentBuilder"));
+		}
+		Document d = db.newDocument();
+		Element root = d.createElement("KVMessage");
+		root.setAttribute("type", msgType);
+		d.appendChild(root);
+		if (key != null) {
+			Element keyNode = d.createElement("Key");
+			keyNode.appendChild(d.createCDATASection(key));
+			root.appendChild(keyNode);
+		}
+		if (value != null) {
+			Element valueNode = d.createElement("Value");
+			valueNode.appendChild(d.createCDATASection(value));
+			root.appendChild(valueNode);
+		}
+		if (status != null) {
+			Element statusNode = d.createElement("Status");
+			statusNode.appendChild(d.createTextNode(status));
+			root.appendChild(statusNode);
+		}
+		if (message != null) {
+			Element messageNode = d.createElement("Message");
+			messageNode.appendChild(d.createCDATASection(message));
+			root.appendChild(messageNode);
+		}
+		if (tpcOpId != null) {
+			Element tpcOpIdNode = d.createElement("TpcOpId");
+			tpcOpIdNode.appendChild(d.createCDATASection(tpcOpId));
+			root.appendChild(tpcOpIdNode);
+		}
+		TransformerFactory tf = TransformerFactory.newInstance();
+		Transformer t;
+		
+		try {
+			t = tf.newTransformer();
+		} catch (TransformerConfigurationException e) {
+			//System.out.println("throwing exception KVMessage line 245");
+			throw new KVException(new KVMessage("resp", null, null, false, "Unknown error: Unable to initialize Transformer"));
+		}
+		
+		StringWriter sw = new StringWriter();
+		//ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		String ret;
+		try {
+			//t.transform(new DOMSource(root), new StreamResult(baos));
+			t.transform(new DOMSource(root), new StreamResult(sw));
+		} catch (TransformerException e) {
+			//System.out.println("throwing exception KVMessage line 256");
+			throw new KVException(new KVMessage("resp", null, null, false, "Unknown error: Unable to generate XML"));
+		}
+		ret = sw.toString();
+		return ret;
+
 	}
 
 	/**
