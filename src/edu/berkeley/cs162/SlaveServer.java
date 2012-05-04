@@ -30,8 +30,12 @@
 package edu.berkeley.cs162;
 
 import java.io.FilterOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 
 public class SlaveServer {
 	static String logPath = null;
@@ -87,26 +91,55 @@ public class SlaveServer {
 		
 		// Register with the Master
 		// implement me
-		SocketServer regServer = new SocketServer(masterHostName, registrationPort);
-		Socket s = regServer.server.accept();
-
+		
+		//Create the socket with the Master
+		Socket s = new Socket(masterHostName, masterPort);
 		FilterOutputStream fos = null;
-
-		//try-catch this
 		fos = new FilterOutputStream(s.getOutputStream());
 		fos.flush();
-
+		//Create a registration message
 		KVMessage regMessage = new KVMessage("register", slaveID+"@"+server.hostname+":"+server.port);
 		String xml = regMessage.toXML();
 		System.out.println("REGISTRATION XML: " + xml);
-		
-		//try-catch this
 		byte [] xmlBytes = xml.getBytes();
+		//Send the registration message
 		fos.write(xmlBytes);
 		fos.flush();
-
-		s.close();
 		fos.close();
+		s.shutdownOutput();
+		
+		//Now look to receive an ACK
+		InputStream is = s.getInputStream();
+		
+		boolean ackReceived = false;
+		
+		while(!ackReceived){
+			try{
+				//Wait for an ACK
+				s.setSoTimeout(5000);
+			} catch(SocketException e){
+				//ACK not received, try sending the message again
+				FilterOutputStream fos1 = null;
+				fos1 = new FilterOutputStream(s.getOutputStream());
+				fos1.flush();
+
+				KVMessage regMessage1 = new KVMessage("register", slaveID+"@"+server.hostname+":"+server.port);
+				String xml1 = regMessage1.toXML();
+				System.out.println("REGISTRATION XML: " + xml);
+				
+				//try-catch this
+				byte [] xmlBytes1 = xml1.getBytes();
+				fos1.write(xmlBytes1);
+				fos1.flush();
+				fos1.close();
+			}
+			
+			//ACK received (hopefully)
+			KVMessage respMessage = new KVMessage(is);
+			if(respMessage.getMsgType().equals("ack")){
+				ackReceived = true;
+			}
+		}
 	}
 
 }
