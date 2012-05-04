@@ -443,6 +443,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		
 		//release writeLock
 		KVCacheLock.unlock();
+		writeLock.unlock();
 		/*
 		update AccessList;
 		release lock on Accesslist;
@@ -450,7 +451,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		release writeLock;
 
 		return true;*/
-		return false;
+		return true;
 	}
 
 	/**
