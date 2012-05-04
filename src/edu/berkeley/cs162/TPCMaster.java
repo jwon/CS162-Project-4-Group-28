@@ -428,7 +428,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			return false;
 		}
 		else {
-			//send ready messages
+			//send commit messages
 		}
 
 		//get writeLock of KVCache(this is the access list)
