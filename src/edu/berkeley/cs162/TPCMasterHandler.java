@@ -120,12 +120,8 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			if(message.getMsgType().equals("getreq")) {
 				V value = null;
 				try {
-					value = (V)KVMessage.unmarshal((String)keyserver.get((K)message.getKey()));
+					value = (V)KVMessage.decodeObject((String)keyserver.get((K)message.getKey()));
 					response = new KVMessage("resp" , message.getKey(), value, null, "Success");
-				} catch (IOException e) {
-					response = new KVMessage("resp", null, null, null, "IO Error");
-				} catch (ClassNotFoundException e) {
-					response = new KVMessage("resp", null, null, null, "Unkown Error: Class Not Found");
 				} catch (KVException e) {
 					response = new KVMessage("resp", null, 
 							null, null, e.getMsg().getMessage());	
@@ -148,7 +144,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			if(message.getMsgType().equals("putreq")){
 				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
-				this.tpcLog.appendAndFlush(response);
+				tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
@@ -167,7 +163,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			if(message.getMsgType().equals("delreq")){
 				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
-				this.tpcLog.appendAndFlush(response);
+				tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
@@ -185,7 +181,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Send an ACK back to the coordinator
 			if(message.getMsgType().equals("commit")){
 				//Perform the operation
-			    this.tpcLog.appendAndFlush(message);
+			    tpcLog.appendAndFlush(message);
 			    response = new KVMessage("ack");
 			    response.setTpcOpId(message.getTpcOpId());
 			    KVMessage commitOp = opIdToOperation.get(message.getTpcOpId());	
@@ -221,7 +217,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("abort")){
-			    this.tpcLog.appendAndFlush(message);
+			    tpcLog.appendAndFlush(message);
 			    //Respond with ACK to the coordinator
 			    response = new KVMessage("ack");
 			    response.setTpcOpId(message.getTpcOpId());

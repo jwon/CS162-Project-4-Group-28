@@ -125,10 +125,10 @@ public class TPCLog<K extends Serializable, V extends Serializable> {
 	 */
 	public void rebuildKeyServer() throws KVException {
 	    loadFromDisk();
-	    for (int i = 0; i < entries.size(), i++) {
+	    for (int i = 0; i < entries.size() ; i++) {
 		KVMessage entry = entries.get(i);
-		K key = KVMessage.unmarshal(entry.getKey());
-		V value = KVMessage.unmarshal(entry.getValue());
+		K key = (K) KVMessage.decodeObject(entry.getKey());
+		V value = (V) KVMessage.decodeObject(entry.getValue());
 		if (entry.getMsgType() == "putreq") 
 		    keyServer.put(key, value);
 		else if (entry.getMsgType() == "delreq")
