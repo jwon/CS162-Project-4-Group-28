@@ -148,6 +148,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			if(message.getMsgType().equals("putreq")){
 				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
+				this.tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
@@ -166,6 +167,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			if(message.getMsgType().equals("delreq")){
 				opIdToOperation.put(message.getTpcOpId(), message);
 				response = new KVMessage("Ready");
+				this.tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
 				xml = response.toXML();
 				byte[] xmlBytes = xml.getBytes();
@@ -183,54 +185,56 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			//Send an ACK back to the coordinator
 			if(message.getMsgType().equals("commit")){
 				//Perform the operation
-				response = new KVMessage("ack");
-				response.setTpcOpId(message.getTpcOpId());
-				KVMessage commitOp = opIdToOperation.get(message.getTpcOpId());
-				if(commitOp.getMsgType().equals("putreq")){
-					try {
-						keyserver.put((K)commitOp.getKey(),(V)commitOp.getValue());
-					} catch (KVException e) {
-						response = new KVMessage("resp", null, 
-								null, null, e.getMsg().getMessage());	
-					}
-				} else if(commitOp.getMsgType().equals("delreq")){
-					try {
-						keyserver.del((K)commitOp.getKey());
-					} catch (KVException e) {
-						response = new KVMessage("resp", null, 
-								null, null, e.getMsg().getMessage());	
-					}
-				}
-				
-				//Respond with ACK or KVException to the coordinator
-				xml = response.toXML();
-				byte[] xmlBytes = xml.getBytes();
+			    this.tpcLog.appendAndFlush(message);
+			    response = new KVMessage("ack");
+			    response.setTpcOpId(message.getTpcOpId());
+			    KVMessage commitOp = opIdToOperation.get(message.getTpcOpId());	
+			    if(commitOp.getMsgType().equals("putreq")){
 				try {
-					fos.write(xmlBytes);
-					fos.flush();
-					s1.shutdownOutput();
-					s1.close();
-				} catch (IOException e) {
-					e.printStackTrace();
+				    keyserver.put((K)commitOp.getKey(),(V)commitOp.getValue());	
+				} catch (KVException e) {
+				    response = new KVMessage("resp", null, 
+							     null, null, e.getMsg().getMessage());		
 				}
+			    } else if(commitOp.getMsgType().equals("delreq")){
+				try {
+				    keyserver.del((K)commitOp.getKey());
+				} catch (KVException e) {
+				    response = new KVMessage("resp", null, 
+							     null, null, e.getMsg().getMessage());		
+				}
+			    }
+				
+			    //Respond with ACK or KVException to the coordinator
+			    xml = response.toXML();
+			    byte[] xmlBytes = xml.getBytes();
+			    try {
+				fos.write(xmlBytes);
+				fos.flush();
+				s1.shutdownOutput();
+				s1.close();
+			    } catch (IOException e) {
+				e.printStackTrace();
+			    }
 			}//End Commit
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
 			//TODO: Send an ACK back to the coordinator
 			if(message.getMsgType().equals("abort")){
-				//Respond with ACK to the coordinator
-				response = new KVMessage("ack");
-				response.setTpcOpId(message.getTpcOpId());
-				xml = response.toXML();
-				byte[] xmlBytes = xml.getBytes();
-				try {
-					fos.write(xmlBytes);
-					fos.flush();
-					s1.shutdownOutput();
-					s1.close();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+			    this.tpcLog.appendAndFlush(message);
+			    //Respond with ACK to the coordinator
+			    response = new KVMessage("ack");
+			    response.setTpcOpId(message.getTpcOpId());
+			    xml = response.toXML();
+			    byte[] xmlBytes = xml.getBytes();
+			    try {
+				fos.write(xmlBytes);
+				fos.flush();
+				s1.shutdownOutput();
+				s1.close();
+			    } catch (IOException e) {
+				e.printStackTrace();
+			    }
 			}//End ACK
 			
 		}
