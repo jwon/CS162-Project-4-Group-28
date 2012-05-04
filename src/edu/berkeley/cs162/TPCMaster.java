@@ -210,6 +210,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 */
 	public TPCMaster(String[] listOfSlaves) throws Exception {
 		// implement me
+		for (int i =0; i<listOfSlaves.length; i++){
+			slaves.add(new SlaveInfo(listOfSlaves[i]));
+		}
+
 
 		// Create registration server
 		regServer = new SocketServer(InetAddress.getLocalHost().getHostAddress(), 9090);
@@ -230,9 +234,20 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 * Start registration server in a separate thread
 	 */
 	public void run() {
+		Socket s = null;
+		try{
+			s = regServer.server.accept();
+		} catch(IOException e){
+
+		}
+
 		TPCRegistrationHandler regHandler = new TPCRegistrationHandler();
-		regHandler.handle(client);
-		// implement me
+
+		try{
+			regHandler.handle(s);
+		} catch (IOException e){
+		
+		}
 	}
 	
 	/**
@@ -278,7 +293,20 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		long hashedKey = hashTo64bit(key.toString());
 
 		// implement me
-		return null;
+		long min = Long.MAX_VALUE;
+
+		SlaveInfo slave = slaves.get(0);
+
+		for(int i = 0; i < slaves.size(); i++){
+			if(hashedKey < slaves.get(i).getSlaveID()){
+				if(slaves.get(i).getSlaveID() < min){
+					min = slaves.get(i).getSlaveID();
+					slave = slaves.get(i);
+				}
+			}
+		}
+
+		return slave;
 	}
 	
 	/**
@@ -288,7 +316,21 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 */
 	private SlaveInfo findSuccessor(SlaveInfo firstReplica) {
 		// implement me
-		return null;
+		int temp = 0;
+
+		for(int i = 0; i < slaves.size(); i++){
+			if(firstReplica.getSlaveID() == slaves.get(i).getSlaveID()){
+				temp = i;
+			}
+		}
+
+		if(temp != slaves.size()){
+			return slaves.get(temp+1);
+		}
+		else{
+			return slaves.get(0);
+		}
+
 	}
 	
 	/**
