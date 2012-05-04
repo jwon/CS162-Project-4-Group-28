@@ -37,6 +37,7 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.TreeSet;
 
@@ -192,7 +193,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		public void setKvSocket(Socket kvSocket) {
 			this.kvSocket = kvSocket;
 		}
-		
+
 		public int getPort(){
 			return this.port;
 		}
@@ -370,28 +371,126 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 		//firstSocket = get the kvSocket of findFirstReplica(key);
 		SlaveInfo slave = findFirstReplica((K)key);
-		Socket firstSocket = slave.getKvSocket();
+		//Socket firstSocket = slave.getKvSocket();
 
 		//secondSocket = get the kvSocket of findSuccessor(findFirstReplica(key));
 		SlaveInfo slave1 = findSuccessor(slave);
-		Socket secondSocket = slave1.getKvSocket();
+		//Socket secondSocket = slave1.getKvSocket();
+
+		//THE FOLLOWING HUGE CHUNK OF CODE IS TO SEND A PREPARE MESSAGE TO SLAVE SERVERS
 
 		//req = a new TPCMessage with the msgType of msg and applicable fields;
-		KVMessage req = new KVMessage(msg.getMsgType());
+		KVMessage req = new KVMessage(msg.getMsgType(), msg.getKey(), msg.getValue());
+		req.setTpcOpId(tpcOpId.toString());
+		getNextTpcOpId();
 
+		//xml is the xml version of request
+		String xml = null;
 
-		//THE FOLLOWING TWO LINES STILL NEED TO BE IMPLEMENTED FUUUUUUUUUUUUUUUUUUUUUU...
-		//stream req to firstSocket;
-		//stream req to secondSocket;
+		//create the sockets to establish connection
+		Socket firstSocket = null;
+		Socket secondSocket = null;
+		try {
+			firstSocket = new Socket(slave.getHostName(),slave.getPort());
+			secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+		} catch (UnknownHostException e1) {
+			System.out.println("exception line 394");
+			e1.printStackTrace();
+		} catch (IOException e1) {
+			System.out.println("exception line 397");
+			e1.printStackTrace();
+		}
+
+		//create the filteroutputstreams
+		FilterOutputStream fos = null;
+		FilterOutputStream fos1 = null;
+		try {
+			fos = new FilterOutputStream(firstSocket.getOutputStream());
+			fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+			fos.flush();
+			fos1.flush();
+		} catch (IOException e) {
+			System.out.println("exception line 409");
+			e.printStackTrace();
+		}
+
+		try {
+			xml = req.toXML();
+			//System.out.println("XML RESPONSE: " + xml);
+		} catch (KVException e1) {
+			System.out.println("exception line 419");
+			System.out.println(e1.getMessage());
+		}
+		byte[] xmlBytes = xml.getBytes();
+		try{
+			fos.write(xmlBytes);
+			fos.flush();
+			fos1.write(xmlBytes);
+			fos1.flush();
+		} catch (IOException e){
+			System.out.println("IO Error line 427");
+			System.out.println(e.getMessage());
+		}
+
+		//END OF THE PREPARE MESSAGE PHASE
+
+		//START OF THE RECEIVING MESSAGE FROM SLAVES PHASE
+
+		KVMessage decision = null;
 
 		//set timeout for firstSocket, secondSocket;
 		try {
 			firstSocket.setSoTimeout(5000);
 			secondSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
-			System.out.print("Got a Socket Exception line 259");
-			System.out.print(e.getMessage());
-			e.printStackTrace();
+			decision = new KVMessage("abort");
+			KVMessage error  = new KVMessage("resp", "Timeout Error: SlaveServer <slaveID> has timed out during the first phase of 2PC");
+			try {
+				firstSocket.close();
+				secondSocket.close();
+			} catch (IOException e1) {
+				System.out.println("exception line 449");
+				System.out.println(e1.getMessage());
+				e1.printStackTrace();
+			}
+			try {
+				firstSocket = new Socket(slave.getHostName(),slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+			} catch (UnknownHostException e1) {
+				System.out.println("exception line 457");
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				System.out.println("exception line 460");
+				e1.printStackTrace();
+			}
+			try {
+				fos = new FilterOutputStream(firstSocket.getOutputStream());
+				fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+				fos.flush();
+				fos1.flush();
+			} catch (IOException e1) {
+				System.out.println("exception line 469");
+				e1.printStackTrace();
+			}
+
+			try {
+				xml = decision.toXML();
+				//System.out.println("XML RESPONSE: " + xml);
+			} catch (KVException e1) {
+				System.out.println("exception line 477");
+				System.out.println(e1.getMessage());
+			}
+			byte[] xmlBytes1 = xml.getBytes();
+			try{
+				fos.write(xmlBytes1);
+				fos.flush();
+				fos1.write(xmlBytes1);
+				fos1.flush();
+			} catch (IOException e1){
+				System.out.println("IO Error line 487");
+				System.out.println(e1.getMessage());
+			}
+			//SEND BACK THE ERROR KVMessage THIS IS NOT FINISHED
 		}
 
 		/*
@@ -418,9 +517,54 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		KVMessage inMsg2 = new KVMessage(secondMsg);
 		System.out.println("line 403 inMsg1.getMsgType() is "+ inMsg1.getMsgType());
 		System.out.println("line 404 inMsg2.getMsgType() is "+ inMsg2.getMsgType());
-		if (inMsg1.getMsgType()!="ready" || inMsg2.getMsgType()!="ready"){
+		if (inMsg1.getMsgType()!="Ready" || inMsg2.getMsgType()!="Ready"){
 			//send abort messages
-			
+
+			decision  = new KVMessage("abort");
+			try {
+				firstSocket.close();
+				secondSocket.close();
+			} catch (IOException e1) {
+				System.out.println("exception line 524");
+				System.out.println(e1.getMessage());
+				e1.printStackTrace();
+			}
+			try {
+				firstSocket = new Socket(slave.getHostName(),slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+			} catch (UnknownHostException e1) {
+				System.out.println("exception line 532");
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				System.out.println("exception line 535");
+				e1.printStackTrace();
+			}
+			try {
+				fos = new FilterOutputStream(firstSocket.getOutputStream());
+				fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+				fos.flush();
+				fos1.flush();
+			} catch (IOException e1) {
+				System.out.println("exception line 545");
+				e1.printStackTrace();
+			}
+
+			try {
+				xml = decision.toXML();
+				//System.out.println("XML RESPONSE: " + xml);
+			} catch (KVException e1) {
+				System.out.println("exception line 477");
+				System.out.println(e1.getMessage());
+			}
+			byte[] xmlBytes1 = xml.getBytes();
+			try{
+				fos.write(xmlBytes1);
+				fos.flush();
+			} catch (IOException e1){
+				System.out.println("IO Error line 487");
+				System.out.println(e1.getMessage());
+			}
+
 			//then return false
 			readLock.unlock();
 			writeLock.unlock();
@@ -428,6 +572,52 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		}
 		else {
 			//send commit messages
+			
+			decision  = new KVMessage("commit");
+			try {
+				firstSocket.close();
+				secondSocket.close();
+			} catch (IOException e1) {
+				System.out.println("exception line 581");
+				System.out.println(e1.getMessage());
+				e1.printStackTrace();
+			}
+			try {
+				firstSocket = new Socket(slave.getHostName(),slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+			} catch (UnknownHostException e1) {
+				System.out.println("exception line 589");
+				e1.printStackTrace();
+			} catch (IOException e1) {
+				System.out.println("exception line 592");
+				e1.printStackTrace();
+			}
+			try {
+				fos = new FilterOutputStream(firstSocket.getOutputStream());
+				fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+				fos.flush();
+				fos1.flush();
+			} catch (IOException e1) {
+				System.out.println("exception line 601");
+				e1.printStackTrace();
+			}
+
+			try {
+				xml = decision.toXML();
+				//System.out.println("XML RESPONSE: " + xml);
+			} catch (KVException e1) {
+				System.out.println("exception line 609");
+				System.out.println(e1.getMessage());
+			}
+			byte[] xmlBytes1 = xml.getBytes();
+			try{
+				fos.write(xmlBytes1);
+				fos.flush();
+			} catch (IOException e1){
+				System.out.println("IO Error line 617");
+				System.out.println(e1.getMessage());
+			}
+			
 		}
 
 		//get writeLock of KVCache(this is the access list)
@@ -438,16 +628,16 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
-		
+
 		//update KVCache with operation;
 		if (isPutReq){
 			masterCache.put((K)(msg.getKey()), (V)(msg.getValue()));
 		}
 		else masterCache.del((K)(msg.getKey()));
-		
+
 		//I HAVEN'T DONE THE FOLLOWING COMMENT
 		//get exclusive lock on AccessList
-		
+
 		//release writeLock
 		KVCacheLock.unlock();
 		writeLock.unlock();
@@ -475,7 +665,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 */
 	public V handleGet(KVMessage msg) throws KVException {
 		// implement me
-		
+
 		try {
 			readLock.lock();
 		} catch (InterruptedException e) {
@@ -483,12 +673,12 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
-		
+
 		V value = masterCache.get((K)msg.getKey());
 		if (value!=null){
 			return value;
 		}
-		
+
 		SlaveInfo first = findFirstReplica((K)msg.getKey());
 		V firstValue = first.getKvClient().get((K)msg.getKey());
 
@@ -497,16 +687,16 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			readLock.unlock();
 			return firstValue;
 		}
-		
+
 		SlaveInfo secondary = findSuccessor(first);
 		V secondaryValue = secondary.getKvClient().get((K)msg.getKey());
-		
+
 		//if (secondaryValue success)
 		if (secondaryValue != null){
 			readLock.unlock();
 			return secondaryValue;
 		}
-		
+
 		throw new KVException(new KVMessage("resp", null, null, false, "Get operation failed for both replicas line 503"));
 	}
 }
