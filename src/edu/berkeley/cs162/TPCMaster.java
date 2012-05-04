@@ -415,6 +415,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			//send abort messages
 			
 			//then return false
+			readLock.unlock();
+			writeLock.unlock();
 			return false;
 		}
 		else {
@@ -450,11 +452,21 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	public V handleGet(KVMessage msg) throws KVException {
 		// implement me
 		
+		try {
+			readLock.lock();
+		} catch (InterruptedException e) {
+			System.out.println("exception line 456");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+		
+		
 		SlaveInfo first = findFirstReplica((K)msg.getKey());
 		V firstValue = first.getKvClient().get((K)msg.getKey());
 
 		//if (firstValue success)
 		if (firstValue!=null){
+			readLock.unlock();
 			return firstValue;
 		}
 		
@@ -463,6 +475,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		
 		//if (secondaryValue success)
 		if (secondaryValue != null){
+			readLock.unlock();
 			return secondaryValue;
 		}
 		
