@@ -87,8 +87,12 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					SlaveInfo slave = null;
 					try{
 						slave = new SlaveInfo(msg.getMessage());
+						Socket slaveSocket = new Socket(slave.getHostName(), slave.getPort());
+						slave.setKvSocket(slaveSocket);
 					} catch (KVException e){
 
+					} catch (IOException e) {
+						e.printStackTrace();
 					}
 
 					slaves.add(slave);
@@ -187,6 +191,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 		public void setKvSocket(Socket kvSocket) {
 			this.kvSocket = kvSocket;
+		}
+		
+		public int getPort(){
+			return this.port;
 		}
 	}
 

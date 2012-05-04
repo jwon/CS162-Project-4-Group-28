@@ -106,7 +106,6 @@ public class SlaveServer {
 		fos.write(xmlBytes);
 		fos.flush();
 		fos.close();
-		s.shutdownOutput();
 		
 		//Now look to receive an ACK
 		InputStream is = s.getInputStream();
