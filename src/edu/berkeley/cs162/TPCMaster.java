@@ -413,6 +413,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		System.out.println("line 404 inMsg2.getMsgType() is "+ inMsg2.getMsgType());
 		if (inMsg1.getMsgType()!="ready" || inMsg2.getMsgType()!="ready"){
 			//send abort messages
+			
 			//then return false
 			return false;
 		}
@@ -448,22 +449,23 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 */
 	public V handleGet(KVMessage msg) throws KVException {
 		// implement me
+		
+		SlaveInfo first = findFirstReplica((K)msg.getKey());
+		V firstValue = first.getKvClient().get((K)msg.getKey());
 
-		/*SlaveInfo first = findFirstReplica(msg.getKey());
-		firstValue = first.getKVClient().get(msg.getKey());
-		if (firstValue success)
+		//if (firstValue success)
+		if (firstValue!=null){
 			return firstValue;
-		else{
-			secondary = findSuccessor(first);
-			secondaryValue = secondary.getKVClient().get(mgs.getKey());
-
-			if(secondaryValue success)
-				return secondaryValue;
-			else{
-				throws KVException for both replicas
-			}
-		}*/
-
-		return null;
+		}
+		
+		SlaveInfo secondary = findSuccessor(first);
+		V secondaryValue = secondary.getKvClient().get((K)msg.getKey());
+		
+		//if (secondaryValue success)
+		if (secondaryValue != null){
+			return secondaryValue;
+		}
+		
+		throw new KVException(new KVMessage("resp", null, null, false, "Get operation failed for both replicas line 468"));
 	}
 }
