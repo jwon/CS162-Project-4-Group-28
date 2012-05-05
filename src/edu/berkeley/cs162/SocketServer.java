@@ -85,6 +85,6 @@ public class SocketServer {
 	 */
 	public void addHandler(NetworkHandler handler) {
 		// implement me
-		this.handler = (KVClientHandler)handler;
+		this.handler = (TPCMasterHandler)handler;
 	}
 }

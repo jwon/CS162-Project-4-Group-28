@@ -93,7 +93,12 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				FilterOutputStream fos = new FilterOutputStream(s1.getOutputStream());
 				fos.flush();
 				response.setMessage(e.getMsg().getMessage());
-				String xml = response.toXML();
+				String xml = null;
+				try {
+					xml = response.toXML();
+				} catch (KVException e1) {
+					e1.printStackTrace();
+				}
 				byte[] xmlBytes = xml.getBytes();
 				fos.write(xmlBytes);
 				fos.flush();
@@ -109,6 +114,7 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				fos = new FilterOutputStream(s1.getOutputStream());
 				fos.flush();
 			} catch (IOException e) {
+				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
 			
@@ -126,14 +132,17 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 					response = new KVMessage("resp", null, 
 							null, null, e.getMsg().getMessage());	
 				} finally {
-					xml = response.toXML();
-					byte[] xmlBytes = xml.getBytes();
 					try {
+						xml = response.toXML();
+						byte[] xmlBytes = xml.getBytes();
 						fos.write(xmlBytes);
 						fos.flush();
 						s1.shutdownOutput();
 						s1.close();
 					} catch (IOException e){
+						e.printStackTrace();
+					} catch (KVException e) {
+						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				}
@@ -146,14 +155,17 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				response = new KVMessage("Ready");
 				tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
-				xml = response.toXML();
-				byte[] xmlBytes = xml.getBytes();
 				try {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
 					fos.write(xmlBytes);
 					fos.flush();
 					s1.shutdownOutput();
 					s1.close();
 				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (KVException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}//End of PUT
@@ -165,14 +177,17 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 				response = new KVMessage("Ready");
 				tpcLog.appendAndFlush(response);
 				response.setTpcOpId(message.getTpcOpId());
-				xml = response.toXML();
-				byte[] xmlBytes = xml.getBytes();
 				try {
+					xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
 					fos.write(xmlBytes);
 					fos.flush();
 					s1.shutdownOutput();
 					s1.close();
 				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (KVException e) {
+					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}//End of DEL
@@ -202,16 +217,19 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			    }
 				
 			    //Respond with ACK or KVException to the coordinator
-			    xml = response.toXML();
-			    byte[] xmlBytes = xml.getBytes();
 			    try {
-				fos.write(xmlBytes);
-				fos.flush();
-				s1.shutdownOutput();
-				s1.close();
+			    	xml = response.toXML();
+					byte[] xmlBytes = xml.getBytes();
+					fos.write(xmlBytes);
+					fos.flush();
+					s1.shutdownOutput();
+					s1.close();
 			    } catch (IOException e) {
 				e.printStackTrace();
-			    }
+			    } catch (KVException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}//End Commit
 			
 			//Is part of the "Decision" message from coordinator in the 2PC diagram
@@ -221,16 +239,19 @@ public class TPCMasterHandler<K extends Serializable, V extends Serializable> im
 			    //Respond with ACK to the coordinator
 			    response = new KVMessage("ack");
 			    response.setTpcOpId(message.getTpcOpId());
-			    xml = response.toXML();
-			    byte[] xmlBytes = xml.getBytes();
 			    try {
-				fos.write(xmlBytes);
-				fos.flush();
-				s1.shutdownOutput();
-				s1.close();
+			    	xml = response.toXML();
+				    byte[] xmlBytes = xml.getBytes();
+			    	fos.write(xmlBytes);
+			    	fos.flush();
+			    	s1.shutdownOutput();
+			    	s1.close();
 			    } catch (IOException e) {
-				e.printStackTrace();
-			    }
+			    	e.printStackTrace();
+			    } catch (KVException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
 			}//End ACK
 			
 		}
