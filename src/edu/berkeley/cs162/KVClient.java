@@ -168,6 +168,7 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 		}
 
 		try {
+
 			s.close();
 			fos.close();
 		} catch (IOException e) {
@@ -260,7 +261,8 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 				throw new KVException(new KVMessage("resp", null, null, null, "IO Error"));
 			}
 		}
-		try {
+		
+		try{
 			s.close();
 			fos.close();
 		} catch (IOException e) {
