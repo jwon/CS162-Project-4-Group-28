@@ -115,7 +115,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 						// TODO Auto-generated catch block
 						e1.printStackTrace();
 					}
-					System.out.println("REGISTRATION ACK: " + xml);
+					//System.out.println("REGISTRATION ACK: " + xml);
 
 					//try-catch this
 					byte[] xmlBytes = xml.getBytes();
@@ -472,224 +472,37 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 			inMsg1 = new KVMessage(firstMsg);
 			inMsg2 = new KVMessage(secondMsg);
 		} catch (SocketTimeoutException e) {
-			KVMessage error = new KVMessage("resp", "Timeout Error: SlaveServer <slaveID> has timed out during the first phase of 2PC");
-			
-			sendAbortOrCommit(firstSocket, secondSocket, slave, slave1, "abort");
-			
-			boolean ackReceived = false;
-			while (!ackReceived) {
-				try {
-					//Wait for an ACK
-					firstSocket.setSoTimeout(5000);
-					secondSocket.setSoTimeout(5000);
-					//ACK received (hopefully)
-					KVMessage respMessage = null;
-					KVMessage respMessage1 = null;
-					InputStream is = null, is1 = null;
-
-					try {
-						is = firstSocket.getInputStream();
-						is1 = secondSocket.getInputStream();
-					} catch (IOException e1) {
-					}
-
-					try {
-						respMessage = new KVMessage(is);
-						respMessage1 = new KVMessage(is1);
-					} catch (SocketTimeoutException e1) {
-						//ACK not received, try sending the message again
-						try {
-							fos = new FilterOutputStream(firstSocket.getOutputStream());
-							fos1 = new FilterOutputStream(secondSocket.getOutputStream());
-						} catch (IOException e3) {
-							// TODO Auto-generated catch block
-							e3.printStackTrace();
-						}
-						try {
-							fos.flush();
-							fos1.flush();
-						} catch (IOException e3) {
-							// TODO Auto-generated catch block
-							e3.printStackTrace();
-						}
-
-						try {
-							xml = decision.toXML();
-							//System.out.println("XML RESPONSE: " + xml);
-						} catch (KVException e2) {
-							System.out.println("exception line 535");
-							System.out.println(e2.getMessage());
-						}
-						byte[] xmlBytes1 = xml.getBytes();
-						try {
-							fos.write(xmlBytes1);
-							fos.flush();
-							fos1.write(xmlBytes1);
-							fos1.flush();
-						} catch (IOException e2) {
-							System.out.println("IO Error line 545");
-							System.out.println(e2.getMessage());
-						}
-					}
-					if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
-						ackReceived = true;
-					}
-				} catch (SocketException e1) {
-				}
-			}
 
 			//SEND BACK THE ERROR KVMessage THIS IS NOT FINISHED
-
-			//then unlock and return false
+			KVMessage error = new KVMessage("resp", "Timeout Error: SlaveServer <slaveID> has timed out during the first phase of 2PC");
+			
+			//then unlock; you don't need these locks anymore
 			writeLock.unlock();
 			readLock.unlock();
-			return false;
-		}
-		System.out.println("line 403 inMsg1.getMsgType() is " + inMsg1.getMsgType());
-		System.out.println("line 404 inMsg2.getMsgType() is " + inMsg2.getMsgType());
-		if (inMsg1.getMsgType() != "ready" || inMsg2.getMsgType() != "ready") {
-			//send abort messages
-
 			sendAbortOrCommit(firstSocket, secondSocket, slave, slave1, "abort");
 
-			boolean ackReceived = false;
-			while (!ackReceived) {
-				try {
-					//Wait for an ACK
-					firstSocket.setSoTimeout(5000);
-					secondSocket.setSoTimeout(5000);
-
-				} catch (SocketException e1) {
-				}
-				//ACK received (hopefully)
-				KVMessage respMessage = null;
-				KVMessage respMessage1 = null;
-
-				InputStream is = null, is1 = null;
-				try {
-					is = firstSocket.getInputStream();
-					is1 = secondSocket.getInputStream();
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-
-				try {
-					respMessage = new KVMessage(is);
-					respMessage1 = new KVMessage(is1);
-				} catch (SocketTimeoutException e1) {
-					//ACK not received, try sending the message again
-					try {
-						fos = new FilterOutputStream(firstSocket.getOutputStream());
-						fos1 = new FilterOutputStream(secondSocket.getOutputStream());
-					} catch (IOException e3) {
-						// TODO Auto-generated catch block
-						e3.printStackTrace();
-					}
-					try {
-						fos.flush();
-						fos1.flush();
-					} catch (IOException e3) {
-						// TODO Auto-generated catch block
-						e3.printStackTrace();
-					}
-
-					try {
-						xml = decision.toXML();
-						//System.out.println("XML RESPONSE: " + xml);
-					} catch (KVException e2) {
-						System.out.println("exception line 666");
-						System.out.println(e2.getMessage());
-					}
-					xmlBytes = xml.getBytes();
-					try {
-						fos.write(xmlBytes);
-						fos.flush();
-						fos1.write(xmlBytes);
-						fos1.flush();
-					} catch (IOException e2) {
-						System.out.println("IO Error line 676");
-						System.out.println(e2.getMessage());
-					}
-				}
-				if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
-					ackReceived = true;
-				}
+			return false;
 			}
-
-			//then return false
+		
+		//System.out.println("line 403 inMsg1.getMsgType() is " + inMsg1.getMsgType());
+		//System.out.println("line 404 inMsg2.getMsgType() is " + inMsg2.getMsgType());
+		if (!(inMsg1.getMsgType() == "ready" && inMsg2.getMsgType() == "ready")) {
+			
+			//you don't need the locks anymore
 			readLock.unlock();
 			writeLock.unlock();
-			return false;
-		} else {
-			//send commit messages
+			
+			//send abort messages
+			sendAbortOrCommit(firstSocket, secondSocket, slave, slave1, "abort");
 
+			//then return false
+			return false;
+			
+		} else {
+			
+			//send commit messages
 			sendAbortOrCommit(firstSocket, secondSocket, slave, slave1, "commit");
 
-		}
-
-		boolean ackReceived = false;
-		while (!ackReceived) {
-			try {
-				//Wait for an ACK
-				firstSocket.setSoTimeout(5000);
-				secondSocket.setSoTimeout(5000);
-
-			} catch (SocketException e1) {
-			}
-			//ACK received (hopefully)
-			KVMessage respMessage = null;
-			KVMessage respMessage1 = null;
-			InputStream is = null, is1 = null;
-			try {
-				is = firstSocket.getInputStream();
-				is1 = secondSocket.getInputStream();
-			} catch (IOException e1) {
-				// TODO Auto-generated catch block
-				e1.printStackTrace();
-			}
-
-			try {
-				respMessage = new KVMessage(is);
-				respMessage1 = new KVMessage(is1);
-			} catch (SocketTimeoutException e1) {
-				//ACK not received, try sending the message again
-				try {
-					fos = new FilterOutputStream(firstSocket.getOutputStream());
-					fos1 = new FilterOutputStream(secondSocket.getOutputStream());
-				} catch (IOException e3) {
-					// TODO Auto-generated catch block
-					e3.printStackTrace();
-				}
-				try {
-					fos.flush();
-					fos1.flush();
-				} catch (IOException e3) {
-					// TODO Auto-generated catch block
-					e3.printStackTrace();
-				}
-
-				try {
-					xml = decision.toXML();
-					//System.out.println("XML RESPONSE: " + xml);
-				} catch (KVException e2) {
-					System.out.println("exception line 782");
-					System.out.println(e2.getMessage());
-				}
-				byte[] xmlBytes1 = xml.getBytes();
-				try {
-					fos.write(xmlBytes1);
-					fos.flush();
-					fos1.write(xmlBytes1);
-					fos1.flush();
-				} catch (IOException e2) {
-					System.out.println("IO Error line 792");
-					System.out.println(e2.getMessage());
-				}
-			}
-			if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
-				ackReceived = true;
-			}
 		}
 
 		//get writeLock of KVCache(this is the access list)
@@ -799,7 +612,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 		try {
 			xml = decision.toXML();
 		} catch (KVException e1) {
-			System.out.println("KVexception line 477");
+			System.out.println("KVexception in sendAbortOrCommit");
 			System.out.println(e1.getMessage());
 		}
 		byte[] xmlBytes1 = xml.getBytes();
@@ -810,5 +623,62 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 			fos1.flush();
 		} catch (IOException e1) {
 		}
+
+		boolean ackReceived = false;
+		while (!ackReceived) {
+			try {
+				//Wait for an ACK
+				firstSocket.setSoTimeout(5000);
+				secondSocket.setSoTimeout(5000);
+				//ACK received (hopefully)
+				KVMessage respMessage = null;
+				KVMessage respMessage1 = null;
+				InputStream is = null, is1 = null;
+
+				try {
+					is = firstSocket.getInputStream();
+					is1 = secondSocket.getInputStream();
+				} catch (IOException e1) {
+				}
+				try {
+					respMessage = new KVMessage(is);
+					respMessage1 = new KVMessage(is1);
+				}
+				catch (KVException e) {
+				}
+				catch (SocketTimeoutException e1) {
+					//ACK not received, try sending the message again
+					try {
+						fos = new FilterOutputStream(firstSocket.getOutputStream());
+						fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+					} catch (IOException e3) {
+					}
+					try {
+						fos.flush();
+						fos1.flush();
+					} catch (IOException e3) {
+					}
+
+					try {
+						xml = decision.toXML();
+						//System.out.println("XML RESPONSE: " + xml);
+					} catch (KVException e2) {
+					}
+					byte[] xmlBytes = xml.getBytes();
+					try {
+						fos.write(xmlBytes);
+						fos.flush();
+						fos1.write(xmlBytes);
+						fos1.flush();
+					} catch (IOException e2) {
+					}
+				}
+				if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
+					ackReceived = true;
+				}
+			} catch (SocketException e1) {
+			}
+		}
+
 	}
 }
