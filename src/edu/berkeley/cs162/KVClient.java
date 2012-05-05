@@ -42,6 +42,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 /**
@@ -154,7 +155,13 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 		}
 
 		
-		KVMessage respMessage = new KVMessage(is);
+		KVMessage respMessage = null;
+		try {
+			respMessage = new KVMessage(is);
+		} catch (SocketTimeoutException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
 		try{
 			s.close();
@@ -239,7 +246,13 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 			}
 		}
 
-		KVMessage respMessage = new KVMessage(is);
+		KVMessage respMessage = null;
+		try {
+			respMessage = new KVMessage(is);
+		} catch (SocketTimeoutException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
 		try{
 			s.close();
@@ -332,7 +345,13 @@ public class KVClient<K extends Serializable, V extends Serializable> implements
 			}
 		}
 		
-		KVMessage respMessage = new KVMessage(is);
+		KVMessage respMessage = null;
+		try {
+			respMessage = new KVMessage(is);
+		} catch (SocketTimeoutException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
 		
 		try{
 			s.close();
