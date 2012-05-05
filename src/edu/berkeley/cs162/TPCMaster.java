@@ -368,7 +368,6 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 			System.out.println(e.getMessage());
 			e.printStackTrace();
 		}
-
 		//key = get msg�s key;
 		String key = msg.getKey();
 
@@ -413,16 +412,11 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 			fos.flush();
 			fos1.flush();
 		} catch (IOException e) {
-			System.out.println("exception line 409");
-			e.printStackTrace();
 		}
-
 		try {
 			xml = req.toXML();
 			//System.out.println("XML RESPONSE: " + xml);
 		} catch (KVException e1) {
-			System.out.println("exception line 419");
-			System.out.println(e1.getMessage());
 		}
 		byte[] xmlBytes = xml.getBytes();
 		try {
@@ -431,8 +425,6 @@ public class TPCMaster<K extends Serializable, V extends Serializable> {
 			fos1.write(xmlBytes);
 			fos1.flush();
 		} catch (IOException e) {
-			System.out.println("IO Error line 427");
-			System.out.println(e.getMessage());
 		}
 
 		//END OF THE PREPARE MESSAGE PHASE
