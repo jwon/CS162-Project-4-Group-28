@@ -39,6 +39,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.io.StringWriter;
+import java.net.SocketTimeoutException;
 import javax.crypto.SecretKey;
 
 import javax.xml.bind.DatatypeConverter;
@@ -110,7 +111,7 @@ public class KVMessage implements Serializable {
 		public void close() {} // ignore close
 	}
 
-	public KVMessage(InputStream input) throws KVException {
+	public KVMessage(InputStream input) throws KVException, SocketTimeoutException {
 		
 		DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
 		DocumentBuilder db;

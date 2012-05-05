@@ -1,31 +1,30 @@
 /**
  * Master for Two-Phase Commits
- * 
+ *
  * @author Mosharaf Chowdhury (http://www.mosharaf.com)
  *
- * Copyright (c) 2012, University of California at Berkeley
- * All rights reserved.
+ * Copyright (c) 2012, University of California at Berkeley All rights reserved.
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions are met:
- *  * Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- *  * Neither the name of University of California, Berkeley nor the
- *    names of its contributors may be used to endorse or promote products
- *    derived from this software without specific prior written permission.
- *    
- *  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
- *  ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
- *  WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- *  DISCLAIMED. IN NO EVENT SHALL PRASHANTH MOHAN BE LIABLE FOR ANY
- *  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
- *  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
- *  LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
- *  ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- *  (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
- *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ * modification, are permitted provided that the following conditions are met: *
+ * Redistributions of source code must retain the above copyright notice, this
+ * list of conditions and the following disclaimer. * Redistributions in binary
+ * form must reproduce the above copyright notice, this list of conditions and
+ * the following disclaimer in the documentation and/or other materials provided
+ * with the distribution. * Neither the name of University of California,
+ * Berkeley nor the names of its contributors may be used to endorse or promote
+ * products derived from this software without specific prior written
+ * permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL PRASHANTH MOHAN BE LIABLE FOR ANY DIRECT,
+ * INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 package edu.berkeley.cs162;
 
@@ -44,14 +43,13 @@ import java.util.TreeSet;
 
 import sun.misc.Lock;
 
-public class TPCMaster<K extends Serializable, V extends Serializable>  {
+public class TPCMaster<K extends Serializable, V extends Serializable> {
 
 	/**
-	 * Implements NetworkHandler to handle registration requests from 
+	 * Implements NetworkHandler to handle registration requests from
 	 * SlaveServers.
-	 * 
+	 *
 	 */
-
 	ArrayList<SlaveInfo> slaves = new ArrayList<SlaveInfo>();
 
 	private class TPCRegistrationHandler implements NetworkHandler {
@@ -60,39 +58,37 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 		public TPCRegistrationHandler() {
 			// Call the other constructor
-			this(1);	
+			this(1);
 		}
 
 		public TPCRegistrationHandler(int connections) {
-			threadpool = new ThreadPool(connections);	
+			threadpool = new ThreadPool(connections);
 		}
 
-		public class runReg implements Runnable{
+		public class runReg implements Runnable {
+
 			Socket regClient = null;
 
-			public runReg(Socket client){
+			public runReg(Socket client) {
 				this.regClient = client;
 			}
 
-			public void run(){
+			public void run() {
 				KVMessage msg = null;
 
-				try{
+				try {
 					msg = new KVMessage(regClient.getInputStream());
-				} catch (KVException e1){
-
-				} catch (IOException e2){
-
+				} catch (KVException e1) {
+				} catch (IOException e2) {
 				}
 
-				if (msg.getMsgType().equals("register")){
+				if (msg.getMsgType().equals("register")) {
 					SlaveInfo slave = null;
-					try{
+					try {
 						slave = new SlaveInfo(msg.getMessage());
 						Socket slaveSocket = new Socket(slave.getHostName(), slave.getPort());
 						slave.setKvSocket(slaveSocket);
-					} catch (KVException e){
-
+					} catch (KVException e) {
 					} catch (IOException e) {
 						e.printStackTrace();
 					}
@@ -111,7 +107,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					}
 
 
-					KVMessage regACK = new KVMessage("resp", "Successfully registered " + slave.slaveID+"@"+slave.getHostName()+":"+slave.port);
+					KVMessage regACK = new KVMessage("resp", "Successfully registered " + slave.slaveID + "@" + slave.getHostName() + ":" + slave.port);
 					String xml = null;
 					try {
 						xml = regACK.toXML();
@@ -122,7 +118,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					System.out.println("REGISTRATION ACK: " + xml);
 
 					//try-catch this
-					byte [] xmlBytes = xml.getBytes();
+					byte[] xmlBytes = xml.getBytes();
 					try {
 						fos.write(xmlBytes);
 						fos.flush();
@@ -135,45 +131,45 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				}
 			}
 		}
+
 		@Override
 		public void handle(Socket client) throws IOException {
 			// implement me
 
 			Runnable r = new runReg(client);
-			try{
+			try {
 				threadpool.addToQueue(r);
-			}catch (InterruptedException e){
-
+			} catch (InterruptedException e) {
 			}
 		}
 	}
 
 	/**
-	 *  Data structure to maintain information about SlaveServers
+	 * Data structure to maintain information about SlaveServers
 	 *
 	 */
 	private class SlaveInfo {
 		// 64-bit globally unique ID of the SlaveServer
+
 		private long slaveID = -1;
 		// Name of the host this SlaveServer is running on
 		private String hostName = null;
 		// Port which SlaveServer is listening to
 		private int port = -1;
-
 		// Variables to be used to maintain connection with this SlaveServer
 		private KVClient<K, V> kvClient = null;
 		private Socket kvSocket = null;
 
 		/**
-		 * 
+		 *
 		 * @param slaveInfo as "SlaveServerID@HostName:Port"
 		 * @throws KVException
 		 */
 		public SlaveInfo(String slaveInfo) throws KVException {
 			// implement me
 			slaveID = Long.valueOf(slaveInfo.substring(0, slaveInfo.indexOf('@')));
-			hostName = slaveInfo.substring(slaveInfo.indexOf('@')+1, slaveInfo.indexOf(':'));
-			port = Integer.valueOf(slaveInfo.substring(slaveInfo.indexOf(':')+1));
+			hostName = slaveInfo.substring(slaveInfo.indexOf('@') + 1, slaveInfo.indexOf(':'));
+			port = Integer.valueOf(slaveInfo.substring(slaveInfo.indexOf(':') + 1));
 
 			//kvClient = new KVClient(hostName, port);
 
@@ -185,7 +181,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			return slaveID;
 		}
 
-		public String getHostName(){
+		public String getHostName() {
 			return hostName;
 		}
 
@@ -201,33 +197,30 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			this.kvSocket = kvSocket;
 		}
 
-		public int getPort(){
+		public int getPort() {
 			return this.port;
 		}
 	}
-
 	// Timeout value used during 2PC operations
 	private static final int TIMEOUT_MILLISECONDS = 5000;
-
 	// Cache stored in the Master/Coordinator Server
 	private KVCache<K, V> masterCache = new KVCache<K, V>(1000);
-
 	// Registration server that uses TPCRegistrationHandler
 	private SocketServer regServer = null;
-
 	// ID of the next 2PC operation
 	private Long tpcOpId = 0L;
 
 	/**
-	 * Creates TPCMaster using SlaveInfo provided as arguments and SlaveServers 
-	 * actually register to let TPCMaster know their presence
-	 * 
-	 * @param listOfSlaves list of SlaveServers in "SlaveServerID@HostName:Port" format
+	 * Creates TPCMaster using SlaveInfo provided as arguments and
+	 * SlaveServers actually register to let TPCMaster know their presence
+	 *
+	 * @param listOfSlaves list of SlaveServers in
+	 * "SlaveServerID@HostName:Port" format
 	 * @throws Exception
 	 */
 	public TPCMaster(String[] listOfSlaves) throws Exception {
 		// implement me
-		for (int i =0; i<listOfSlaves.length; i++){
+		for (int i = 0; i < listOfSlaves.length; i++) {
 			slaves.add(new SlaveInfo(listOfSlaves[i]));
 		}
 
@@ -237,14 +230,15 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	}
 
 	/**
-	 * Calculates tpcOpId to be used for an operation. In this implementation
-	 * it is a long variable that increases by one for each 2PC operation. 
-	 * 
-	 * @return 
+	 * Calculates tpcOpId to be used for an operation. In this
+	 * implementation it is a long variable that increases by one for each
+	 * 2PC operation.
+	 *
+	 * @return
 	 */
 	private String getNextTpcOpId() {
 		tpcOpId++;
-		return tpcOpId.toString();		
+		return tpcOpId.toString();
 	}
 
 	/**
@@ -252,42 +246,43 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	 */
 	public void run() {
 		Socket s = null;
-		try{
+		try {
 			s = regServer.server.accept();
-		} catch(IOException e){
-
+		} catch (IOException e) {
 		}
 
 		TPCRegistrationHandler regHandler = new TPCRegistrationHandler();
 
-		try{
+		try {
 			regHandler.handle(s);
-		} catch (IOException e){
-
+		} catch (IOException e) {
 		}
 	}
 
 	/**
-	 * Converts Strings to 64-bit longs
-	 * Borrowed from http://stackoverflow.com/questions/1660501/what-is-a-good-64bit-hash-function-in-java-for-textual-strings
+	 * Converts Strings to 64-bit longs Borrowed from
+	 * http://stackoverflow.com/questions/1660501/what-is-a-good-64bit-hash-function-in-java-for-textual-strings
 	 * Adapted from String.hashCode()
+	 *
 	 * @param string String to hash to 64-bit
 	 * @return
 	 */
 	private long hashTo64bit(String string) {
 		// Take a large prime
-		long h = 1125899906842597L; 
+		long h = 1125899906842597L;
 		int len = string.length();
 
 		for (int i = 0; i < len; i++) {
-			h = 31*h + string.charAt(i);
+			h = 31 * h + string.charAt(i);
 		}
 		return h;
 	}
 
 	/**
-	 * Compares two longs as if they were unsigned (Java doesn't have unsigned data types except for char)
-	 * Borrowed from http://www.javamex.com/java_equivalents/unsigned_arithmetic.shtml
+	 * Compares two longs as if they were unsigned (Java doesn't have
+	 * unsigned data types except for char) Borrowed from
+	 * http://www.javamex.com/java_equivalents/unsigned_arithmetic.shtml
+	 *
 	 * @param n1 First long
 	 * @param n2 Second long
 	 * @return is unsigned n1 less than unsigned n2
@@ -298,10 +293,11 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 	private boolean isLessThanEqualUnsigned(long n1, long n2) {
 		return isLessThanUnsigned(n1, n2) || n1 == n2;
-	}	
+	}
 
 	/**
 	 * Find first/primary replica location
+	 *
 	 * @param key
 	 * @return
 	 */
@@ -314,9 +310,9 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 		SlaveInfo slave = slaves.get(0);
 
-		for(int i = 0; i < slaves.size(); i++){
-			if(hashedKey < slaves.get(i).getSlaveID()){
-				if(slaves.get(i).getSlaveID() < min){
+		for (int i = 0; i < slaves.size(); i++) {
+			if (hashedKey < slaves.get(i).getSlaveID()) {
+				if (slaves.get(i).getSlaveID() < min) {
 					min = slaves.get(i).getSlaveID();
 					slave = slaves.get(i);
 				}
@@ -328,6 +324,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 
 	/**
 	 * Find the successor of firstReplica to put the second replica
+	 *
 	 * @param firstReplica
 	 * @return
 	 */
@@ -335,24 +332,22 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		// implement me
 		int temp = 0;
 
-		for(int i = 0; i < slaves.size(); i++){
-			if(firstReplica.getSlaveID() == slaves.get(i).getSlaveID()){
+		for (int i = 0; i < slaves.size(); i++) {
+			if (firstReplica.getSlaveID() == slaves.get(i).getSlaveID()) {
 				temp = i;
 			}
 		}
 
-		if(temp != slaves.size()){
-			return slaves.get(temp+1);
-		}
-		else{
+		if (temp != slaves.size()) {
+			return slaves.get(temp + 1);
+		} else {
 			return slaves.get(0);
 		}
 
 	}
-
 	/**
 	 * Synchronized method to perform 2PC operations one after another
-	 * 
+	 *
 	 * @param msg
 	 * @param isPutReq
 	 * @return True if the TPC operation has succeeded
@@ -361,6 +356,7 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 	static Lock writeLock = new Lock();
 	static Lock readLock = new Lock();
 	static Lock KVCacheLock = new Lock();
+
 	public synchronized boolean performTPCOperation(KVMessage msg, boolean isPutReq) throws KVException {
 		// the following is pseudocode. write it up as you go along
 
@@ -373,11 +369,11 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			e.printStackTrace();
 		}
 
-		//key = get msg’s key;
+		//key = get msgï¿½s key;
 		String key = msg.getKey();
 
 		//firstSocket = get the kvSocket of findFirstReplica(key);
-		SlaveInfo slave = findFirstReplica((K)key);
+		SlaveInfo slave = findFirstReplica((K) key);
 		//Socket firstSocket = slave.getKvSocket();
 
 		//secondSocket = get the kvSocket of findSuccessor(findFirstReplica(key));
@@ -398,8 +394,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		Socket firstSocket = null;
 		Socket secondSocket = null;
 		try {
-			firstSocket = new Socket(slave.getHostName(),slave.getPort());
-			secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+			firstSocket = new Socket(slave.getHostName(), slave.getPort());
+			secondSocket = new Socket(slave1.getHostName(), slave1.getPort());
 		} catch (UnknownHostException e1) {
 			System.out.println("exception line 394");
 			e1.printStackTrace();
@@ -429,12 +425,12 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			System.out.println(e1.getMessage());
 		}
 		byte[] xmlBytes = xml.getBytes();
-		try{
+		try {
 			fos.write(xmlBytes);
 			fos.flush();
 			fos1.write(xmlBytes);
 			fos1.flush();
-		} catch (IOException e){
+		} catch (IOException e) {
 			System.out.println("IO Error line 427");
 			System.out.println(e.getMessage());
 		}
@@ -450,8 +446,34 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			firstSocket.setSoTimeout(5000);
 			secondSocket.setSoTimeout(5000);
 		} catch (SocketException e) {
+		}
+
+		/*
+		 * try to receive TPCMessages from firstSocket and secondSocket:
+		 * if either socket times out: stream abort message to both
+		 * firstSocket and secondSocket; return false; if both sockets
+		 * send ready messages: stream ready message to both firstSocket
+		 * and secondSocket;
+		 */
+		InputStream firstMsg = null;
+		InputStream secondMsg = null;
+
+		try {
+			firstMsg = firstSocket.getInputStream();
+			secondMsg = secondSocket.getInputStream();
+		} catch (IOException e) {
+			System.out.println("IOException line 335");
+			System.out.println(e.getMessage());
+			e.printStackTrace();
+		}
+
+		KVMessage inMsg1, inMsg2;
+		try {
+			inMsg1 = new KVMessage(firstMsg);
+			inMsg2 = new KVMessage(secondMsg);
+		} catch (SocketTimeoutException e) {
 			decision = new KVMessage("abort");
-			KVMessage error  = new KVMessage("resp", "Timeout Error: SlaveServer <slaveID> has timed out during the first phase of 2PC");
+			KVMessage error = new KVMessage("resp", "Timeout Error: SlaveServer <slaveID> has timed out during the first phase of 2PC");
 			try {
 				firstSocket.close();
 				secondSocket.close();
@@ -461,8 +483,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				e1.printStackTrace();
 			}
 			try {
-				firstSocket = new Socket(slave.getHostName(),slave.getPort());
-				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+				firstSocket = new Socket(slave.getHostName(), slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(), slave1.getPort());
 			} catch (UnknownHostException e1) {
 				System.out.println("exception line 457");
 				e1.printStackTrace();
@@ -488,69 +510,75 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				System.out.println(e1.getMessage());
 			}
 			byte[] xmlBytes1 = xml.getBytes();
-			try{
+			try {
 				fos.write(xmlBytes1);
 				fos.flush();
 				fos1.write(xmlBytes1);
 				fos1.flush();
-			} catch (IOException e1){
+			} catch (IOException e1) {
 				System.out.println("IO Error line 490");
 				System.out.println(e1.getMessage());
 			}
 
 			boolean ackReceived = false;
-			while(!ackReceived){
-				try{
+			while (!ackReceived) {
+				try {
 					//Wait for an ACK
 					firstSocket.setSoTimeout(5000);
 					secondSocket.setSoTimeout(5000);
 					//ACK received (hopefully)
 					KVMessage respMessage = null;
 					KVMessage respMessage1 = null;
+					InputStream is = null, is1 = null;
+
 					try {
-						respMessage = new KVMessage(firstSocket.getInputStream());
-						respMessage1 = new KVMessage(secondSocket.getInputStream());
+						is = firstSocket.getInputStream();
+						is1 = secondSocket.getInputStream();
 					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					if(respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")){
-						ackReceived = true;
-					}
-				} catch(SocketException e1){
-					//ACK not received, try sending the message again
-					try {
-						fos = new FilterOutputStream(firstSocket.getOutputStream());
-						fos1 = new FilterOutputStream(secondSocket.getOutputStream());
-					} catch (IOException e3) {
-						// TODO Auto-generated catch block
-						e3.printStackTrace();
-					}
-					try {
-						fos.flush();
-						fos1.flush();
-					} catch (IOException e3) {
-						// TODO Auto-generated catch block
-						e3.printStackTrace();
 					}
 
 					try {
-						xml = decision.toXML();
-						//System.out.println("XML RESPONSE: " + xml);
-					} catch (KVException e2) {
-						System.out.println("exception line 535");
-						System.out.println(e2.getMessage());
+						respMessage = new KVMessage(is);
+						respMessage1 = new KVMessage(is1);
+					} catch (SocketTimeoutException e1) {
+						//ACK not received, try sending the message again
+						try {
+							fos = new FilterOutputStream(firstSocket.getOutputStream());
+							fos1 = new FilterOutputStream(secondSocket.getOutputStream());
+						} catch (IOException e3) {
+							// TODO Auto-generated catch block
+							e3.printStackTrace();
+						}
+						try {
+							fos.flush();
+							fos1.flush();
+						} catch (IOException e3) {
+							// TODO Auto-generated catch block
+							e3.printStackTrace();
+						}
+
+						try {
+							xml = decision.toXML();
+							//System.out.println("XML RESPONSE: " + xml);
+						} catch (KVException e2) {
+							System.out.println("exception line 535");
+							System.out.println(e2.getMessage());
+						}
+						xmlBytes1 = xml.getBytes();
+						try {
+							fos.write(xmlBytes1);
+							fos.flush();
+							fos1.write(xmlBytes1);
+							fos1.flush();
+						} catch (IOException e2) {
+							System.out.println("IO Error line 545");
+							System.out.println(e2.getMessage());
+						}
 					}
-					xmlBytes1 = xml.getBytes();
-					try{
-						fos.write(xmlBytes1);
-						fos.flush();
-						fos1.write(xmlBytes1);
-						fos1.flush();
-					} catch (IOException e2){
-						System.out.println("IO Error line 545");
-						System.out.println(e2.getMessage());
+					if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
+						ackReceived = true;
 					}
+				} catch (SocketException e1) {
 				}
 			}
 
@@ -561,35 +589,12 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			readLock.unlock();
 			return false;
 		}
-
-		/*
-		 * try to receive TPCMessages from firstSocket and secondSocket:
-		 * if either socket times out:
-		 * stream abort message to both firstSocket and secondSocket;
-		 * return false;
-		 * if both sockets send ready messages:
-		 * stream ready message to both firstSocket and secondSocket;
-		 */
-		InputStream firstMsg = null;
-		InputStream secondMsg = null;
-
-		try {
-			firstMsg = firstSocket.getInputStream();
-			secondMsg = secondSocket.getInputStream();
-		} catch (IOException e) {
-			System.out.println("IOException line 335");
-			System.out.println(e.getMessage());
-			e.printStackTrace();
-		}
-
-		KVMessage inMsg1 = new KVMessage(firstMsg);
-		KVMessage inMsg2 = new KVMessage(secondMsg);
-		System.out.println("line 403 inMsg1.getMsgType() is "+ inMsg1.getMsgType());
-		System.out.println("line 404 inMsg2.getMsgType() is "+ inMsg2.getMsgType());
-		if (inMsg1.getMsgType()!="Ready" || inMsg2.getMsgType()!="Ready"){
+		System.out.println("line 403 inMsg1.getMsgType() is " + inMsg1.getMsgType());
+		System.out.println("line 404 inMsg2.getMsgType() is " + inMsg2.getMsgType());
+		if (inMsg1.getMsgType() != "Ready" || inMsg2.getMsgType() != "Ready") {
 			//send abort messages
 
-			decision  = new KVMessage("abort");
+			decision = new KVMessage("abort");
 			try {
 				firstSocket.close();
 				secondSocket.close();
@@ -599,8 +604,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				e1.printStackTrace();
 			}
 			try {
-				firstSocket = new Socket(slave.getHostName(),slave.getPort());
-				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+				firstSocket = new Socket(slave.getHostName(), slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(), slave1.getPort());
 			} catch (UnknownHostException e1) {
 				System.out.println("exception line 532");
 				e1.printStackTrace();
@@ -626,34 +631,40 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				System.out.println(e1.getMessage());
 			}
 			byte[] xmlBytes1 = xml.getBytes();
-			try{
+			try {
 				fos.write(xmlBytes1);
 				fos.flush();
-			} catch (IOException e1){
+			} catch (IOException e1) {
 				System.out.println("IO Error line 487");
 				System.out.println(e1.getMessage());
 			}
 
 			boolean ackReceived = false;
-			while(!ackReceived){
-				try{
+			while (!ackReceived) {
+				try {
 					//Wait for an ACK
 					firstSocket.setSoTimeout(5000);
 					secondSocket.setSoTimeout(5000);
-					//ACK received (hopefully)
-					KVMessage respMessage = null;
-					KVMessage respMessage1 = null;
-					try {
-						respMessage = new KVMessage(firstSocket.getInputStream());
-						respMessage1 = new KVMessage(secondSocket.getInputStream());
-					} catch (IOException e1) {
-						// TODO Auto-generated catch block
-						e1.printStackTrace();
-					}
-					if(respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")){
-						ackReceived = true;
-					}
-				} catch(SocketException e1){
+
+				} catch (SocketException e1) {
+				}
+				//ACK received (hopefully)
+				KVMessage respMessage = null;
+				KVMessage respMessage1 = null;
+
+				InputStream is = null, is1 = null;
+				try {
+					is = firstSocket.getInputStream();
+					is1 = secondSocket.getInputStream();
+				} catch (IOException e1) {
+					// TODO Auto-generated catch block
+					e1.printStackTrace();
+				}
+
+				try {
+					respMessage = new KVMessage(is);
+					respMessage1 = new KVMessage(is1);
+				} catch (SocketTimeoutException e1) {
 					//ACK not received, try sending the message again
 					try {
 						fos = new FilterOutputStream(firstSocket.getOutputStream());
@@ -678,15 +689,18 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 						System.out.println(e2.getMessage());
 					}
 					xmlBytes1 = xml.getBytes();
-					try{
+					try {
 						fos.write(xmlBytes1);
 						fos.flush();
 						fos1.write(xmlBytes1);
 						fos1.flush();
-					} catch (IOException e2){
+					} catch (IOException e2) {
 						System.out.println("IO Error line 676");
 						System.out.println(e2.getMessage());
 					}
+				}
+				if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
+					ackReceived = true;
 				}
 			}
 
@@ -694,11 +708,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			readLock.unlock();
 			writeLock.unlock();
 			return false;
-		}
-		else {
+		} else {
 			//send commit messages
 
-			decision  = new KVMessage("commit");
+			decision = new KVMessage("commit");
 			try {
 				firstSocket.close();
 				secondSocket.close();
@@ -708,8 +721,8 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				e1.printStackTrace();
 			}
 			try {
-				firstSocket = new Socket(slave.getHostName(),slave.getPort());
-				secondSocket = new Socket(slave1.getHostName(),slave1.getPort());
+				firstSocket = new Socket(slave.getHostName(), slave.getPort());
+				secondSocket = new Socket(slave1.getHostName(), slave1.getPort());
 			} catch (UnknownHostException e1) {
 				System.out.println("exception line 708");
 				e1.printStackTrace();
@@ -735,10 +748,10 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 				System.out.println(e1.getMessage());
 			}
 			byte[] xmlBytes1 = xml.getBytes();
-			try{
+			try {
 				fos.write(xmlBytes1);
 				fos.flush();
-			} catch (IOException e1){
+			} catch (IOException e1) {
 				System.out.println("IO Error line 736");
 				System.out.println(e1.getMessage());
 			}
@@ -746,25 +759,30 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		}
 
 		boolean ackReceived = false;
-		while(!ackReceived){
-			try{
+		while (!ackReceived) {
+			try {
 				//Wait for an ACK
 				firstSocket.setSoTimeout(5000);
 				secondSocket.setSoTimeout(5000);
-				//ACK received (hopefully)
-				KVMessage respMessage = null;
-				KVMessage respMessage1 = null;
-				try {
-					respMessage = new KVMessage(firstSocket.getInputStream());
-					respMessage1 = new KVMessage(secondSocket.getInputStream());
-				} catch (IOException e1) {
-					// TODO Auto-generated catch block
-					e1.printStackTrace();
-				}
-				if(respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")){
-					ackReceived = true;
-				}
-			} catch(SocketException e1){
+
+			} catch (SocketException e1) {
+			}
+			//ACK received (hopefully)
+			KVMessage respMessage = null;
+			KVMessage respMessage1 = null;
+			InputStream is = null, is1 = null;
+			try {
+				is = firstSocket.getInputStream();
+				is1 = secondSocket.getInputStream();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+
+			try {
+				respMessage = new KVMessage(is);
+				respMessage1 = new KVMessage(is1);
+			} catch (SocketTimeoutException e1) {
 				//ACK not received, try sending the message again
 				try {
 					fos = new FilterOutputStream(firstSocket.getOutputStream());
@@ -789,15 +807,18 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 					System.out.println(e2.getMessage());
 				}
 				byte[] xmlBytes1 = xml.getBytes();
-				try{
+				try {
 					fos.write(xmlBytes1);
 					fos.flush();
 					fos1.write(xmlBytes1);
 					fos1.flush();
-				} catch (IOException e2){
+				} catch (IOException e2) {
 					System.out.println("IO Error line 792");
 					System.out.println(e2.getMessage());
 				}
+			}
+			if (respMessage.getMsgType().equals("ack") && respMessage1.getMsgType().equals("ack")) {
+				ackReceived = true;
 			}
 		}
 
@@ -811,10 +832,11 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		}
 
 		//update KVCache with operation;
-		if (isPutReq){
-			masterCache.put((K)(msg.getKey()), (V)(msg.getValue()));
+		if (isPutReq) {
+			masterCache.put((K) (msg.getKey()), (V) (msg.getValue()));
+		} else {
+			masterCache.del((K) (msg.getKey()));
 		}
-		else masterCache.del((K)(msg.getKey()));
 
 		//I HAVEN'T DONE THE FOLLOWING COMMENT
 		//get exclusive lock on AccessList
@@ -823,23 +845,22 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 		KVCacheLock.unlock();
 		writeLock.unlock();
 		/*
-		update AccessList;
-		release lock on Accesslist;
-
-		release writeLock;
-
-		return true;*/
+		 * update AccessList; release lock on Accesslist;
+		 *
+		 * release writeLock;
+		 *
+		 * return true;
+		 */
 		return true;
 	}
 
 	/**
-	 * Perform GET operation in the following manner:
-	 * - Try to GET from first/primary replica
-	 * - If primary succeeded, return Value
-	 * - If primary failed, try to GET from the other replica
-	 * - If secondary succeeded, return Value
-	 * - If secondary failed, return KVExceptions from both replicas
-	 * 
+	 * Perform GET operation in the following manner: - Try to GET from
+	 * first/primary replica - If primary succeeded, return Value - If
+	 * primary failed, try to GET from the other replica - If secondary
+	 * succeeded, return Value - If secondary failed, return KVExceptions
+	 * from both replicas
+	 *
 	 * @param msg Message containing Key to get
 	 * @return Value corresponding to the Key
 	 * @throws KVException
@@ -855,25 +876,25 @@ public class TPCMaster<K extends Serializable, V extends Serializable>  {
 			e.printStackTrace();
 		}
 
-		V value = masterCache.get((K)msg.getKey());
-		if (value!=null){
+		V value = masterCache.get((K) msg.getKey());
+		if (value != null) {
 			return value;
 		}
 
-		SlaveInfo first = findFirstReplica((K)msg.getKey());
-		V firstValue = first.getKvClient().get((K)msg.getKey());
+		SlaveInfo first = findFirstReplica((K) msg.getKey());
+		V firstValue = first.getKvClient().get((K) msg.getKey());
 
 		//if (firstValue success)
-		if (firstValue!=null){
+		if (firstValue != null) {
 			readLock.unlock();
 			return firstValue;
 		}
 
 		SlaveInfo secondary = findSuccessor(first);
-		V secondaryValue = secondary.getKvClient().get((K)msg.getKey());
+		V secondaryValue = secondary.getKvClient().get((K) msg.getKey());
 
 		//if (secondaryValue success)
-		if (secondaryValue != null){
+		if (secondaryValue != null) {
 			readLock.unlock();
 			return secondaryValue;
 		}
