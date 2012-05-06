@@ -35,6 +35,7 @@ import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.Socket;
 import java.net.SocketException;
+import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 
 public class SlaveServer {
@@ -121,7 +122,7 @@ public class SlaveServer {
 				if(respMessage.getMsgType().equals("ack")){
 					ackReceived = true;
 				}
-			} catch(SocketException e){
+			} catch(SocketTimeoutException e){
 				//ACK not received, try sending the message again
 				FilterOutputStream fos1 = null;
 				fos1 = new FilterOutputStream(s.getOutputStream());
