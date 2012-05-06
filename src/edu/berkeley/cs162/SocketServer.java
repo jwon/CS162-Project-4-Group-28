@@ -64,7 +64,7 @@ public class SocketServer {
 
 	public void connect() throws IOException {
 		// implement me
-		server = new ServerSocket(this.port);
+		server = new ServerSocket(0);
 	}
 	
 	/**
