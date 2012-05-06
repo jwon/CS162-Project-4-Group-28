@@ -238,6 +238,26 @@ public class KVClientHandler<K extends Serializable, V extends Serializable> imp
 					} catch (IOException e) {
 						
 					}
+				}//End "delreq"
+				
+			} else if(message.getMsgType().equals("getEnKey")) {
+				response = new KVMessage("resp", null, null, null, KVCrypt.keyStr);
+				try {
+					xml = response.toXML();
+				} catch (KVException e1) {
+					//System.out.println("Fail XML conversion");
+				}
+				byte[] xmlBytes = xml.getBytes();
+				try{
+					fos.write(xmlBytes);
+					fos.flush();
+				} catch (IOException e){
+					//System.out.println("IO Error");
+				}
+				try {
+					s1.shutdownOutput();
+				} catch (IOException e) {
+					
 				}
 			}
 			
