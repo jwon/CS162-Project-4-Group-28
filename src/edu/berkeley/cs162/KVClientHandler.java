@@ -241,8 +241,9 @@ public class KVClientHandler<K extends Serializable, V extends Serializable> imp
 				}//End "delreq"
 				
 			} else if(message.getMsgType().equals("getEnKey")) {
-				response = new KVMessage("resp", null, null, null, KVCrypt.keyStr);
+				
 				try {
+					response = new KVMessage("resp", null, null, null, KVMessage.encodeObject(KVCrypt.getKey()));
 					xml = response.toXML();
 				} catch (KVException e1) {
 					//System.out.println("Fail XML conversion");
